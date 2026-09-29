@@ -95,9 +95,16 @@
     <div class="card-header"><i class="bi bi-info-circle"></i> Leyenda</div>
     <div class="card-body">
         <div class="d-flex flex-wrap gap-3">
-            {% for tipo in tipos_con_color %}
+            {% for tipo in tipos %}
                 <div>
-                    <span style="display: inline-block; width: 12px; height: 12px; border-radius: 50%; background-color: {{ tipo.2 }};"></span>
+                    <span style="display: inline-block; width: 12px; height: 12px; border-radius: 50%; background-color:
+                        {% if tipo.0 == 'examen' %}#e74c3c
+                        {% elif tipo.0 == 'consejo' %}#f39c12
+                        {% elif tipo.0 == 'evento' %}#3498db
+                        {% elif tipo.0 == 'feriado' %}#95a5a6
+                        {% elif tipo.0 == 'reunion' %}#17a2b8
+                        {% elif tipo.0 == 'suspension' %}#2c3e50
+                        {% else %}#6c757d{% endif %};"></span>
                     <small>{{ tipo.1 }}</small>
                 </div>
             {% endfor %}
