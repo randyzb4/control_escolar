@@ -1,0 +1,26 @@
+{% extends 'horarios/base.html' %}
+
+{% block title %}Eliminar Planeación{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header bg-danger text-white">
+        <i class="bi bi-exclamation-triangle"></i> Confirmar eliminación
+    </div>
+    <div class="card-body">
+        <p>¿Estás seguro de que quieres eliminar esta planeación?</p>
+        <ul>
+            <li><strong>Título:</strong> {{ plan.titulo }}</li>
+            <li><strong>Grupo:</strong> {{ plan.grupo_materia.grupo.nombre }}</li>
+            <li><strong>Materia:</strong> {{ plan.grupo_materia.materia.nombre }}</li>
+            <li><strong>Sesiones:</strong> {{ plan.num_sesiones }}</li>
+        </ul>
+        <p class="text-danger">Se eliminarán también todas las sesiones asociadas.</p>
+        <form method="post">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-danger"><i class="bi bi-trash"></i> Eliminar</button>
+            <a href="{% url 'horarios:planeaciones_lista' %}" class="btn btn-outline-secondary">Cancelar</a>
+        </form>
+    </div>
+</div>
+{% endblock %}

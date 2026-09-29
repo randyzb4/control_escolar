@@ -1,0 +1,310 @@
+{% extends 'horarios/base.html' %}
+
+{% block title %}Boleta de {{ alumno.apellido_paterno }} {{ alumno.apellido_materno|default:'' }} {{ alumno.nombre }}{% endblock %}
+
+{% block content %}{{ alumno.apellido_paterno }} {{ alumno.apellido_materno|default:'' }} {{ alumno.nombre }} | Matrícula: {{ alumno.matricula }} | Grupo: {{ alumno.grupo.nombre }}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2><i class="bi bi-file-earmark-text"></i> Boleta de Calificaciones</h2>
+        <p class="text-muted mb-1">
+            {{ alumno.apellido_paterno }} {{ alumno.apellido_materno|default:'' }} {{ alumno.nombre }} | Matrícula: {{ alumno.matricula }} | Grupo: {{ alumno.grupo.nombre }}
+        </p>
+        <p class="text-muted mb-0">Año escolar: {{ anio_escolar.nombre }}</p>
+    </div>
+    <div class="d-flex gap-2">
+        <a class="btn btn-outline-secondary" href="javascript:history.back()">Volver</a>
+        {% if tipo_sel %}
+            <a class="btn btn-danger" href="{% url 'horarios:pdf_boleta_alumno' alumno.id %}?tipo={{ tipo_sel }}&id={{ id_sel }}">
+                <i class="bi bi-file-pdf"></i> PDF
+            </a>
+        {% endif %}
+        <button class="btn btn-outline-primary" onclick="window.print()">
+            <i class="bi bi-printer"></i> Imprimir
+        </button>
+    </div>
+</div>
+
+<!-- Filtro -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="get" class="row g-3 align-items-end">
+            <div class="col-md-4">
+                <label class="form-label">Tipo de boleta</label>
+                <select name="tipo" id="id_tipo" class="form-select">
+                    <option value="">Selecciona...</option>
+                    <option value="periodo" {% if tipo_sel == 'periodo' %}selected{% endif %}>Por periodo</option>
+                    <option value="trimestre" {% if tipo_sel == 'trimestre' %}selected{% endif %}>Por trimestre</option>
+                    <option value="final" {% if tipo_sel == 'final' %}selected{% endif %}>Calificación final</option>
+                </select>
+            </div>
+            <div class="col-md-5">
+                <label class="form-label">Selección</label>
+                <select name="id" id="id_selector" class="form-select">
+                    <option value="">Selecciona un tipo primero</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <button type="submit" class="btn btn-primary w-100">
+                    <i class="bi bi-search"></i> Generar boleta
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Tabla según el tipo -->
+{% if tipo_sel == 'periodo' and columnas %}
+    <div class="card">
+        <div class="card-header">
+            <i class="bi bi-calendar-check"></i> Boleta del {{ periodo_sel.nombre|default:"Periodo" }}
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-bordered mb-0">
+                    <thead class="table-dark">
+                        <tr>
+                            <th style="width: 60%;">Materia</th>
+                            <th class="text-center">Calificación</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for fila in filas %}
+                            <tr>
+                                <td>{{ fila.materia.nombre }}</td>
+                                <td class="text-center">
+                                    {% if fila.calificacion %}
+                                        {% if fila.calificacion >= 6 %}
+                                            <span class="badge bg-success fs-6">{{ fila.calificacion }}</span>
+                                        {% else %}
+                                            <span class="badge bg-danger fs-6">{{ fila.calificacion }}</span>
+                                        {% endif %}
+                                    {% else %}
+                                        <span class="text-muted">—</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+{% elif tipo_sel == 'trimestre' and columnas %}
+    <div class="card">
+        <div class="card-header">
+            <i class="bi bi-calendar-week"></i> Boleta del {{ trimestre_sel.nombre|default:"Trimestre" }}
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-bordered mb-0">
+                    <thead class="table-dark">
+                        <tr>
+                            <th style="width: 40%;">Materia</th>
+                            {% for p in columnas %}
+                                <th class="text-center">{{ p.nombre }}</th>
+                            {% endfor %}
+                            <th class="text-center">Promedio</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for fila in filas %}
+                            <tr>
+                                <td>{{ fila.materia.nombre }}</td>
+                                {% for calif in fila.calificaciones %}
+                                    <td class="text-center">
+                                        {% if calif %}
+                                            {% if calif >= 6 %}
+                                                <span class="badge bg-success">{{ calif }}</span>
+                                            {% else %}
+                                                <span class="badge bg-danger">{{ calif }}</span>
+                                            {% endif %}
+                                        {% else %}
+                                            <span class="text-muted">—</span>
+                                        {% endif %}
+                                    </td>
+                                {% endfor %}
+                                <td class="text-center">
+                                    {% if fila.promedio %}
+                                        {% if fila.promedio >= 6 %}
+                                            <strong class="text-success">{{ fila.promedio }}</strong>
+                                        {% else %}
+                                            <strong class="text-danger">{{ fila.promedio }}</strong>
+                                        {% endif %}
+                                    {% else %}
+                                        <span class="text-muted">—</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                    <tfoot class="table-secondary">
+                        <tr>
+                            <td class="fw-bold">Promedio del periodo</td>
+                            {% for prom in promedios_extra %}
+                                <td class="text-center fw-bold">
+                                    {% if prom %}{{ prom }}{% else %}—{% endif %}
+                                </td>
+                            {% endfor %}
+                            <td class="text-center fw-bold">
+                                {% if promedio_general %}
+                                    {% if promedio_general >= 6 %}
+                                        <span class="text-success">{{ promedio_general }}</span>
+                                    {% else %}
+                                        <span class="text-danger">{{ promedio_general }}</span>
+                                    {% endif %}
+                                {% else %}
+                                    —
+                                {% endif %}
+                            </td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+    </div>
+
+{% elif tipo_sel == 'final' and columnas %}
+    <div class="card">
+        <div class="card-header">
+            <i class="bi bi-trophy"></i> Boleta Final
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-bordered mb-0">
+                    <thead class="table-dark">
+                        <tr>
+                            <th style="width: 40%;">Materia</th>
+                            {% for t in columnas %}
+                                <th class="text-center">{{ t.nombre }}</th>
+                            {% endfor %}
+                            <th class="text-center">Promedio Final</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for fila in filas %}
+                            <tr>
+                                <td>{{ fila.materia.nombre }}</td>
+                                {% for calif in fila.trimestres %}
+                                    <td class="text-center">
+                                        {% if calif %}
+                                            {% if calif >= 6 %}
+                                                <span class="badge bg-success">{{ calif }}</span>
+                                            {% else %}
+                                                <span class="badge bg-danger">{{ calif }}</span>
+                                            {% endif %}
+                                        {% else %}
+                                            <span class="text-muted">—</span>
+                                        {% endif %}
+                                    </td>
+                                {% endfor %}
+                                <td class="text-center">
+                                    {% if fila.promedio_final %}
+                                        {% if fila.promedio_final >= 6 %}
+                                            <strong class="text-success">{{ fila.promedio_final }}</strong>
+                                        {% else %}
+                                            <strong class="text-danger">{{ fila.promedio_final }}</strong>
+                                        {% endif %}
+                                    {% else %}
+                                        <span class="text-muted">—</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                    <tfoot class="table-secondary">
+                        <tr>
+                            <td class="fw-bold">Promedio del trimestre</td>
+                            {% for prom in promedios_extra %}
+                                <td class="text-center fw-bold">
+                                    {% if prom %}{{ prom }}{% else %}—{% endif %}
+                                </td>
+                            {% endfor %}
+                            <td class="text-center fw-bold">
+                                {% if promedio_general %}
+                                    {% if promedio_general >= 6 %}
+                                        <span class="text-success">{{ promedio_general }}</span>
+                                    {% else %}
+                                        <span class="text-danger">{{ promedio_general }}</span>
+                                    {% endif %}
+                                {% else %}
+                                    —
+                                {% endif %}
+                            </td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+    </div>
+
+{% else %}
+    <div class="alert alert-info">
+        <i class="bi bi-info-circle"></i> Selecciona un tipo de boleta y presiona "Generar boleta".
+    </div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+{{ periodos|json_script:"data-periodos" }}
+{{ trimestres|json_script:"data-trimestres" }}
+<script>
+(function() {
+    const rawPeriodos = document.getElementById('data-periodos');
+    const rawTrimestres = document.getElementById('data-trimestres');
+
+    const periodos = rawPeriodos ? JSON.parse(rawPeriodos.textContent) : [];
+    const trimestres = rawTrimestres ? JSON.parse(rawTrimestres.textContent) : [];
+
+    const idSel = "{{ id_sel }}";
+
+    function actualizarOpciones() {
+        const tipo = document.getElementById('id_tipo').value;
+        const selector = document.getElementById('id_selector');
+        if (!selector) return;
+
+        selector.innerHTML = '';
+
+        let opciones = [];
+        let placeholder = 'Selecciona...';
+
+        if (tipo === 'periodo') {
+            opciones = periodos;
+            placeholder = 'Selecciona un periodo...';
+        } else if (tipo === 'trimestre') {
+            opciones = trimestres;
+            placeholder = 'Selecciona un trimestre...';
+        } else if (tipo === 'final') {
+            selector.innerHTML = '<option value="">No requiere selección</option>';
+            return;
+        } else {
+            selector.innerHTML = '<option value="">Selecciona un tipo primero</option>';
+            return;
+        }
+
+        const vacio = document.createElement('option');
+        vacio.value = '';
+        vacio.textContent = placeholder;
+        selector.appendChild(vacio);
+
+        opciones.forEach(function(op) {
+            const opt = document.createElement('option');
+            opt.value = op.id;
+            opt.textContent = op.nombre;
+            if (String(op.id) === idSel) {
+                opt.selected = true;
+            }
+            selector.appendChild(opt);
+        });
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        const selectTipo = document.getElementById('id_tipo');
+        if (selectTipo) {
+            selectTipo.addEventListener('change', actualizarOpciones);
+        }
+        actualizarOpciones();
+    });
+})();
+</script>
+{% endblock %}

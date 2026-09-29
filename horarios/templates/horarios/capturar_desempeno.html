@@ -1,0 +1,80 @@
+{% extends 'horarios/base.html' %}
+
+{% block title %}Capturar {{ evidencia.nombre }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2><i class="bi bi-pencil-square"></i> Capturar calificaciones</h2>
+        <p class="text-muted mb-0">
+            Evidencia: <strong>{{ evidencia.nombre }}</strong> |
+            Valor: <strong>{{ evidencia.porcentaje }}%</strong>
+        </p>
+        <p class="text-muted mb-0">
+            Grupo: {{ gm.grupo.nombre }} | Materia: {{ gm.materia.nombre }}
+        </p>
+    </div>
+    <a href="{% url 'horarios:desempeno_grupo' gm.grupo.id %}?materia={{ gm.id }}&periodo={{ evidencia.periodo.id }}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left"></i> Volver
+    </a>
+</div>
+
+<div class="alert alert-info">
+    <i class="bi bi-info-circle"></i>
+    Captura el <strong>porcentaje obtenido</strong> por cada alumno en esta evidencia
+    (de 0 a {{ evidencia.porcentaje }}). Deja vacío para no asignar.
+</div>
+
+{% if alumnos_con_calif %}
+<form method="post">
+    {% csrf_token %}
+    <div class="card">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-bordered table-hover mb-0">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>#</th>
+                            <th>Matrícula</th>
+                            <th>Alumno</th>
+                            <th class="text-center">% Obtenido (0-{{ evidencia.porcentaje }})</th>
+                            <th>Observaciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for alumno, calificacion in alumnos_con_calif %}
+                            <tr>
+                                <td>{{ forloop.counter }}</td>
+                                <td>{{ alumno.matricula }}</td>
+                                <td>{{ alumno.apellido_paterno }} {{ alumno.apellido_materno|default:'' }} {{ alumno.nombre }}</td>
+                                <td>
+                                    <input type="number" step="0.01" min="0"
+                                           max="{{ evidencia.porcentaje }}"
+                                           name="porcentaje_{{ alumno.id }}"
+                                           class="form-control form-control-sm"
+                                           value="{{ calificacion.porcentaje_obtenido|default_if_none:'' }}">
+                                </td>
+                                <td>
+                                    <input type="text" name="obs_{{ alumno.id }}"
+                                           class="form-control form-control-sm"
+                                           value="{{ calificacion.observaciones|default:'' }}">
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    <div class="mt-3">
+        <button type="submit" class="btn btn-primary">
+            <i class="bi bi-save"></i> Guardar Calificaciones
+        </button>
+    </div>
+</form>
+{% else %}
+<div class="alert alert-warning">
+    <i class="bi bi-exclamation-triangle"></i> No hay alumnos en este grupo.
+</div>
+{% endif %}
+{% endblock %}

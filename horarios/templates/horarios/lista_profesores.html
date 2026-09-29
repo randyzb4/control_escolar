@@ -1,0 +1,27 @@
+{% extends 'horarios/base.html' %}
+
+{% block title %}Profesores{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-person-badge"></i> Profesores</h2>
+    <a href="{% url 'horarios:dashboard' %}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Volver</a>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        {% if profesores %}
+            <ul class="list-group list-group-flush">
+                {% for profesor in profesores %}
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <span><i class="bi bi-person-circle text-primary"></i> {{ profesor.nombre }}</span>
+                        <a href="{% url 'horarios:horario_profesor' profesor.id %}" class="btn btn-sm btn-primary">Ver horario</a>
+                    </li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p class="text-muted text-center">No hay profesores registrados.</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

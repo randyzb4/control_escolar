@@ -1,0 +1,114 @@
+{% extends 'horarios/base.html' %}
+
+{% block title %}Calendario {{ nombre_mes }} {{ anio }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-calendar3"></i> Calendario Escolar</h2>
+    <div class="d-flex gap-2">
+        {% if user.is_staff %}
+            <a class="btn btn-primary" href="{% url 'horarios:evento_crear' %}">
+                <i class="bi bi-plus-circle"></i> Nuevo evento
+            </a>
+        {% elif user.perfil and user.perfil.rol == 'coordinador' %}
+            <a class="btn btn-primary" href="{% url 'horarios:evento_crear' %}">
+                <i class="bi bi-plus-circle"></i> Nuevo evento
+            </a>
+        {% endif %}
+        <a class="btn btn-danger" href="{% url 'horarios:pdf_calendario' %}?mes={{ mes }}&anio={{ anio }}" target="_blank">
+            <i class="bi bi-file-pdf"></i> PDF
+        </a>
+        <button class="btn btn-outline-primary" onclick="window.print()">
+            <i class="bi bi-printer"></i> Imprimir
+        </button>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <a class="btn btn-outline-secondary btn-sm" href="{% url 'horarios:calendario' %}?mes={{ mes_anterior }}&anio={{ anio_anterior }}">
+            <i class="bi bi-chevron-left"></i> Anterior
+        </a>
+        <h4 class="mb-0">{{ nombre_mes }} {{ anio }}</h4>
+        <a class="btn btn-outline-secondary btn-sm" href="{% url 'horarios:calendario' %}?mes={{ mes_siguiente }}&anio={{ anio_siguiente }}">
+            Siguiente <i class="bi bi-chevron-right"></i>
+        </a>
+    </div>
+    <div class="card-body p-0">
+        <table class="table table-bordered mb-0" style="table-layout: fixed;">
+            <thead class="table-dark">
+                <tr>
+                    <th class="text-center" style="width: 14.28%;">Lunes</th>
+                    <th class="text-center" style="width: 14.28%;">Martes</th>
+                    <th class="text-center" style="width: 14.28%;">Miércoles</th>
+                    <th class="text-center" style="width: 14.28%;">Jueves</th>
+                    <th class="text-center" style="width: 14.28%;">Viernes</th>
+                    <th class="text-center" style="width: 14.28%;">Sábado</th>
+                    <th class="text-center" style="width: 14.28%;">Domingo</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for semana in semanas %}
+                    <tr>
+                        {% for dia in semana %}
+                            <td class="align-top p-1 {% if not dia.es_del_mes %}bg-light text-muted{% endif %}" style="height: 110px; vertical-align: top;">
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <span class="badge {% if dia.es_hoy %}bg-primary{% else %}bg-light text-dark{% endif %}">
+                                        {{ dia.dia }}
+                                    </span>
+                                    {% if dia.es_del_mes %}
+                                        {% if user.is_staff %}
+                                            <a href="{% url 'horarios:evento_crear' %}?fecha={{ dia.fecha|date:'Y-m-d' }}"
+                                               class="text-decoration-none text-muted"
+                                               title="Agregar evento">
+                                                <i class="bi bi-plus-circle"></i>
+                                            </a>
+                                        {% elif user.perfil and user.perfil.rol == 'coordinador' %}
+                                            <a href="{% url 'horarios:evento_crear' %}?fecha={{ dia.fecha|date:'Y-m-d' }}"
+                                               class="text-decoration-none text-muted"
+                                               title="Agregar evento">
+                                                <i class="bi bi-plus-circle"></i>
+                                            </a>
+                                        {% endif %}
+                                    {% endif %}
+                                </div>
+                                {% for evento in dia.eventos %}
+                                    <div class="mb-1 small" style="border-left: 3px solid {{ evento.color_hex }}; padding-left: 4px;">
+                                        <a href="{% url 'horarios:evento_editar' evento.id %}"
+                                           class="text-decoration-none"
+                                           style="color: {{ evento.color_hex }}; font-size: 11px;"
+                                           title="{{ evento.descripcion|default:evento.titulo }}">
+                                            {{ evento.titulo|truncatechars:22 }}
+                                        </a>
+                                    </div>
+                                {% endfor %}
+                            </td>
+                        {% endfor %}
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="card mt-3">
+    <div class="card-header"><i class="bi bi-info-circle"></i> Leyenda</div>
+    <div class="card-body">
+        <div class="d-flex flex-wrap gap-3">
+            {% for tipo in tipos %}
+                <div>
+                    <span style="display: inline-block; width: 12px; height: 12px; border-radius: 50%; background-color:
+                        {% if tipo.0 == 'examen' %}#e74c3c
+                        {% elif tipo.0 == 'consejo' %}#f39c12
+                        {% elif tipo.0 == 'evento' %}#3498db
+                        {% elif tipo.0 == 'feriado' %}#95a5a6
+                        {% elif tipo.0 == 'reunion' %}#17a2b8
+                        {% elif tipo.0 == 'suspension' %}#2c3e50
+                        {% else %}#6c757d{% endif %};"></span>
+                    <small>{{ tipo.1 }}</small>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}

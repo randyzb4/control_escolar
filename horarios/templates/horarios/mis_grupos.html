@@ -1,0 +1,45 @@
+{% extends 'horarios/base.html' %}
+
+{% block title %}Mis Grupos{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-people"></i> Mis Grupos</h2>
+    <span class="text-muted">Profesor: <strong>{{ profesor.nombre }}</strong></span>
+</div>
+
+{% if grupos_con_materias %}
+    <div class="row g-4">
+        {% for item in grupos_con_materias %}
+            <div class="col-md-6 col-lg-4">
+                <div class="card h-100">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <span><i class="bi bi-people-fill"></i> {{ item.grupo.nombre }}</span>
+                        <span class="badge bg-primary">{{ item.grupo.num_alumnos }} alumnos</span>
+                    </div>
+                    <div class="card-body">
+                        <p class="text-muted mb-2">Materias que impartes:</p>
+                        <ul class="list-unstyled mb-0">
+                            {% for m in item.materias %}
+                                <li><i class="bi bi-book"></i> {{ m.nombre }}</li>
+                            {% empty %}
+                                <li class="text-muted">Sin materias</li>
+                            {% endfor %}
+                        </ul>
+                        <div class="mt-3">
+                            <a class="btn btn-sm btn-outline-primary"
+                               href="{% url 'horarios:horario_grupo' item.grupo.id %}">
+                                <i class="bi bi-calendar-week"></i> Ver horario del grupo
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+{% else %}
+    <div class="alert alert-info">
+        <i class="bi bi-info-circle"></i> No tienes grupos asignados.
+    </div>
+{% endif %}
+{% endblock %}

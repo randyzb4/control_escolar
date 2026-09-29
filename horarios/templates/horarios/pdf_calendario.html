@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Calendario {{ nombre_mes }} {{ anio }}</title>
+    <style>
+        @page { size: A4 landscape; margin: 1cm; }
+        body { font-family: Arial, sans-serif; color: #000; }
+
+        .header-institucion {
+            text-align: center;
+            border-bottom: 2px solid #2c3e50;
+            padding-bottom: 8px;
+            margin-bottom: 10px;
+        }
+        .header-institucion h2 {
+            font-size: 13pt;
+            color: #2c3e50;
+            margin: 3px 0 2px 0;
+        }
+        .header-institucion p {
+            font-size: 9pt;
+            color: #555;
+            margin: 2px 0;
+        }
+        .header-institucion img {
+            height: 40px;
+            width: auto;
+            margin-bottom: 3px;
+        }
+
+        h1 { text-align: center; font-size: 18pt; color: #2c3e50; margin: 0 0 8px 0; }
+
+        table.calendario { width: 100%; border-collapse: collapse; }
+        table.calendario th {
+            background-color: #2c3e50;
+            color: white;
+            border: 1px solid #000;
+            padding: 5px;
+            font-size: 10pt;
+            text-align: center;
+        }
+        table.calendario td {
+            border: 1px solid #000;
+            height: 75px;
+            vertical-align: top;
+            padding: 4px;
+            font-size: 9pt;
+            width: 14.28%;
+        }
+        table.calendario td.otro-mes { background-color: #ecf0f1; color: #95a5a6; }
+        table.calendario td .dia-num { font-weight: bold; font-size: 11pt; margin-bottom: 2px; }
+        table.calendario td .evento {
+            font-size: 7pt;
+            margin-bottom: 2px;
+            padding-left: 3px;
+        }
+
+        /* Leyenda */
+        .leyenda {
+            margin-top: 15px;
+            border: 1px solid #ccc;
+            padding: 8px;
+            background-color: #f9f9f9;
+        }
+        .leyenda h3 {
+            font-size: 11pt;
+            color: #2c3e50;
+            margin: 0 0 6px 0;
+        }
+        .leyenda table.tabla-leyenda {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .leyenda td.color-cell {
+            width: 18px;
+            height: 18px;
+            border: 1px solid #333;
+            padding: 0;
+            margin: 0;
+        }
+        .leyenda td.texto-cell {
+            border: none;
+            padding: 3px 10px 3px 5px;
+            font-size: 9pt;
+            vertical-align: middle;
+            text-align: left;
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 12px;
+            font-size: 8pt;
+            color: #555;
+        }
+    </style>
+</head>
+<body>
+    <div class="header-institucion">
+        {% if logo_base64 %}
+            <img src="{{ logo_base64 }}" alt="Logo">
+        {% endif %}
+        <h2>{{ config_institucion.nombre_institucion|default:"Institución" }}</h2>
+        {% if config_institucion.ciclo_escolar %}
+            <p>Ciclo escolar: {{ config_institucion.ciclo_escolar }}</p>
+        {% endif %}
+    </div>
+
+    <h1>Calendario Escolar - {{ nombre_mes }} {{ anio }}</h1>
+
+    <table class="calendario">
+        <thead>
+            <tr>
+                <th>Lunes</th>
+                <th>Martes</th>
+                <th>Miércoles</th>
+                <th>Jueves</th>
+                <th>Viernes</th>
+                <th>Sábado</th>
+                <th>Domingo</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for semana in semanas %}
+                <tr>
+                    {% for dia in semana %}
+                        <td {% if not dia.es_del_mes %}class="otro-mes"{% endif %}>
+                            <div class="dia-num">{{ dia.dia }}</div>
+                            {% for evento in dia.eventos %}
+                                <div class="evento" style="border-left: 2px solid {{ evento.color_hex }};">
+                                    {{ evento.titulo|truncatechars:25 }}
+                                </div>
+                            {% endfor %}
+                        </td>
+                    {% endfor %}
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <!-- LEYENDA DE COLORES -->
+    <div class="leyenda">
+        <h3>Significado de los colores</h3>
+        <table class="tabla-leyenda">
+            <tr>
+                <td class="color-cell" style="background-color: #e74c3c;">&nbsp;</td>
+                <td class="texto-cell">Examen</td>
+                <td class="color-cell" style="background-color: #f39c12;">&nbsp;</td>
+                <td class="texto-cell">Consejo Técnico</td>
+                <td class="color-cell" style="background-color: #3498db;">&nbsp;</td>
+                <td class="texto-cell">Evento escolar</td>
+                <td class="color-cell" style="background-color: #95a5a6;">&nbsp;</td>
+                <td class="texto-cell">Día feriado</td>
+            </tr>
+            <tr>
+                <td class="color-cell" style="background-color: #17a2b8;">&nbsp;</td>
+                <td class="texto-cell">Reunión</td>
+                <td class="color-cell" style="background-color: #2c3e50;">&nbsp;</td>
+                <td class="texto-cell">Suspensión de clases</td>
+                <td class="color-cell" style="background-color: #6c757d;">&nbsp;</td>
+                <td class="texto-cell">Otro</td>
+                <td class="texto-cell"></td>
+                <td class="texto-cell"></td>
+            </tr>
+        </table>
+    </div>
+
+    <div class="footer">Generado el {% now "d/m/Y H:i" %}</div>
+</body>
+</html>

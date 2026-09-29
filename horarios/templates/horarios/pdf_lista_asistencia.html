@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Lista de Asistencia - {{ grupo.nombre }}</title>
+    <style>
+        @page { size: A4 landscape; margin: 0.6cm; }
+        body { font-family: Arial, sans-serif; color: #000; }
+
+        .header-institucion {
+            text-align: center;
+            border-bottom: 2px solid #2c3e50;
+            padding-bottom: 8px;
+            margin-bottom: 10px;
+        }
+        .header-institucion h2 {
+            font-size: 13pt;
+            color: #2c3e50;
+            margin: 3px 0 2px 0;
+        }
+        .header-institucion p {
+            font-size: 9pt;
+            color: #555;
+            margin: 2px 0;
+        }
+        .header-institucion img {
+            height: 40px;
+            width: auto;
+            margin-bottom: 3px;
+        }
+
+        table {
+            width: 28.5cm;
+            table-layout: fixed;
+            border-collapse: collapse;
+            margin-bottom: 10px;
+        }
+
+        th {
+            background-color: #2c3e50;
+            color: white;
+            border: 1px solid #000;
+            padding: 2px 1px;
+            text-align: center;
+            font-weight: bold;
+            vertical-align: middle;
+        }
+
+        td {
+            border: 1px solid #000;
+            text-align: center;
+            vertical-align: middle;
+            color: #000;
+            padding: 1px 2px;
+        }
+
+        th.col-num, td.col-num { width: 0.8cm; font-size: 10pt; }
+        th.col-mat, td.col-mat { width: 2.2cm; font-size: 9pt; }
+        th.col-nombre, td.col-nombre {
+            width: 8.5cm;
+            text-align: left;
+            padding-left: 6px;
+            font-size: 10pt;
+            font-weight: bold;
+            line-height: 1.1;
+        }
+        th.col-dia, td.col-dia {
+            width: 1.7cm;
+            font-size: 10pt;
+            padding: 1px 1px;
+        }
+
+        th.dia-semana {
+            font-size: 7pt;
+            font-weight: normal;
+            background-color: #34495e;
+            padding: 1px 1px;
+        }
+        th.dia-numero {
+            font-size: 10pt;
+            padding: 2px 1px;
+        }
+
+        tbody tr { height: 0.55cm; }
+        tbody td { padding: 1px 2px; }
+
+        .firma { margin-top: 15px; text-align: center; }
+        .firma-line {
+            border-top: 1px solid #000;
+            width: 280px;
+            margin: 0 auto;
+            padding-top: 3px;
+            font-size: 9pt;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 8px;
+            font-size: 7pt;
+            color: #555;
+        }
+
+        /* Forzar salto de página antes de la segunda tabla */
+        .nueva-pagina {
+            page-break-before: always;
+        }
+    </style>
+</head>
+<body>
+    <!-- ============================================
+         PÁGINA 1: Primera mitad del mes
+         ============================================ -->
+    <div class="header-institucion">
+        {% if logo_base64 %}
+            <img src="{{ logo_base64 }}" alt="Logo">
+        {% endif %}
+        <h2>{{ config_institucion.nombre_institucion|default:"Institución" }}</h2>
+        {% if config_institucion.ciclo_escolar %}
+            <p>Ciclo escolar: {{ config_institucion.ciclo_escolar }}</p>
+        {% endif %}
+    </div>
+
+    <div style="text-align: center; margin-bottom: 6px;">
+        <strong>Lista de Asistencia</strong> — Grupo: <strong>{{ grupo.nombre }}</strong>
+        &nbsp;|&nbsp; Mes: <strong>{{ nombre_mes }} {{ anio }}</strong>
+        &nbsp;|&nbsp; Días hábiles: <strong>{{ total_dias_habiles }}</strong>
+    </div>
+
+    <table>
+        <colgroup>
+            <col style="width: 0.8cm;">
+            <col style="width: 2.2cm;">
+            <col style="width: 8.5cm;">
+            {% for d in dias_primera %}
+                <col style="width: 1.7cm;">
+            {% endfor %}
+        </colgroup>
+        <thead>
+            <tr>
+                <th rowspan="2" class="col-num">#</th>
+                <th rowspan="2" class="col-mat">Matrícula</th>
+                <th rowspan="2" class="col-nombre">Nombre del Alumno</th>
+                {% for d in dias_primera %}
+                    <th class="col-dia dia-semana">{{ d.1 }}</th>
+                {% endfor %}
+            </tr>
+            <tr>
+                {% for d in dias_primera %}
+                    <th class="col-dia dia-numero">{{ d.0 }}</th>
+                {% endfor %}
+            </tr>
+        </thead>
+        <tbody>
+            {% for alumno in alumnos %}
+                <tr>
+                    <td class="col-num">{{ forloop.counter }}</td>
+                    <td class="col-mat">{{ alumno.matricula }}</td>
+                    <td class="col-nombre">{{ alumno.apellido_paterno }} {{ alumno.apellido_materno|default:'' }} {{ alumno.nombre }}</td>
+                    {% for d in dias_primera %}
+                        <td class="col-dia"></td>
+                    {% endfor %}
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <div class="firma">
+        <div class="firma-line">Nombre y firma del profesor</div>
+    </div>
+
+    <p class="footer">{{ config_institucion.nombre_institucion|default:"" }} — Generado el {% now 'd/m/Y H:i' %}</p>
+
+    <!-- ============================================
+         PÁGINA 2: Segunda mitad del mes
+         (con salto de página forzado)
+         ============================================ -->
+    {% if dias_segunda %}
+    <div class="nueva-pagina">
+        <div class="header-institucion">
+            {% if logo_base64 %}
+                <img src="{{ logo_base64 }}" alt="Logo">
+            {% endif %}
+            <h2>{{ config_institucion.nombre_institucion|default:"Institución" }}</h2>
+            {% if config_institucion.ciclo_escolar %}
+                <p>Ciclo escolar: {{ config_institucion.ciclo_escolar }}</p>
+            {% endif %}
+        </div>
+
+        <div style="text-align: center; margin-bottom: 6px;">
+            <strong>Lista de Asistencia</strong> — Grupo: <strong>{{ grupo.nombre }}</strong>
+            &nbsp;|&nbsp; Mes: <strong>{{ nombre_mes }} {{ anio }}</strong>
+            &nbsp;|&nbsp; Días hábiles: <strong>{{ total_dias_habiles }}</strong>
+        </div>
+
+        <table>
+            <colgroup>
+                <col style="width: 0.8cm;">
+                <col style="width: 2.2cm;">
+                <col style="width: 8.5cm;">
+                {% for d in dias_segunda %}
+                    <col style="width: 1.7cm;">
+                {% endfor %}
+            </colgroup>
+            <thead>
+                <tr>
+                    <th rowspan="2" class="col-num">#</th>
+                    <th rowspan="2" class="col-mat">Matrícula</th>
+                    <th rowspan="2" class="col-nombre">Nombre del Alumno</th>
+                    {% for d in dias_segunda %}
+                        <th class="col-dia dia-semana">{{ d.1 }}</th>
+                    {% endfor %}
+                </tr>
+                <tr>
+                    {% for d in dias_segunda %}
+                        <th class="col-dia dia-numero">{{ d.0 }}</th>
+                    {% endfor %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for alumno in alumnos %}
+                    <tr>
+                        <td class="col-num">{{ forloop.counter }}</td>
+                        <td class="col-mat">{{ alumno.matricula }}</td>
+                        <td class="col-nombre">{{ alumno.apellido_paterno }} {{ alumno.apellido_materno|default:'' }} {{ alumno.nombre }}</td>
+                        {% for d in dias_segunda %}
+                            <td class="col-dia"></td>
+                        {% endfor %}
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <div class="firma">
+            <div class="firma-line">Nombre y firma del profesor</div>
+        </div>
+
+        <p class="footer">{{ config_institucion.nombre_institucion|default:"" }} — Generado el {% now 'd/m/Y H:i' %}</p>
+    </div>
+    {% endif %}
+</body>
+</html>

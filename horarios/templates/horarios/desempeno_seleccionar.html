@@ -1,0 +1,98 @@
+{% extends 'horarios/base.html' %}
+
+{% block title %}Bitácora de Desempeño{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-graph-up-arrow"></i> Bitácora de Desempeño</h2>
+    <a class="btn btn-outline-secondary" href="{% url 'horarios:dashboard' %}">
+        <i class="bi bi-arrow-left"></i> Volver
+    </a>
+</div>
+
+<div class="alert alert-info">
+    <i class="bi bi-info-circle"></i>
+    Selecciona el grupo, materia y periodo para ver o capturar calificaciones ponderadas.
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <form method="post">
+            {% csrf_token %}
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label">Grupo</label>
+                    <select name="grupo" id="id_grupo" class="form-select" required>
+                        <option value="">Selecciona un grupo</option>
+                        {% for g in grupos %}
+                            <option value="{{ g.id }}">{{ g.nombre }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Materia</label>
+                    <select name="materia" id="id_materia" class="form-select" required>
+                        <option value="">Selecciona un grupo primero</option>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Periodo</label>
+                    <select name="periodo" class="form-select" required>
+                        <option value="">Selecciona un periodo</option>
+                        {% for p in periodos %}
+                            <option value="{{ p.id }}">{{ p.nombre }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            <div class="mt-3">
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-search"></i> Ver desempeño
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function() {
+    const selGrupo = document.getElementById('id_grupo');
+    const selMateria = document.getElementById('id_materia');
+    const apiUrl = "{% url 'horarios:materias_por_grupo' %}";
+
+    if (!selGrupo || !selMateria) return;
+
+    selGrupo.addEventListener('change', function() {
+        const grupoId = this.value;
+
+        selMateria.innerHTML = '<option value="">Cargando...</option>';
+
+        if (!grupoId) {
+            selMateria.innerHTML = '<option value="">Selecciona un grupo primero</option>';
+            return;
+        }
+
+        fetch(apiUrl + '?grupo=' + encodeURIComponent(grupoId))
+            .then(r => r.json())
+            .then(data => {
+                selMateria.innerHTML = '<option value="">Selecciona una materia</option>';
+                if (data.materias && data.materias.length > 0) {
+                    data.materias.forEach(m => {
+                        const opt = document.createElement('option');
+                        opt.value = m.id;
+                        opt.textContent = m.nombre;
+                        selMateria.appendChild(opt);
+                    });
+                } else {
+                    selMateria.innerHTML = '<option value="">Sin materias asignadas</option>';
+                }
+            })
+            .catch(() => {
+                selMateria.innerHTML = '<option value="">Error al cargar</option>';
+            });
+    });
+})();
+</script>
+{% endblock %}

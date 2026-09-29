@@ -1,0 +1,31 @@
+{% extends 'horarios/base.html' %}
+
+{% block title %}Eliminar Evento{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header bg-danger text-white">
+        <i class="bi bi-exclamation-triangle"></i> Confirmar eliminación
+    </div>
+    <div class="card-body">
+        <p>¿Estás seguro de que quieres eliminar este evento?</p>
+        <ul>
+            <li><strong>Título:</strong> {{ evento.titulo }}</li>
+            <li><strong>Fecha:</strong> {{ evento.fecha|date:"d/m/Y" }}</li>
+            <li><strong>Tipo:</strong> {{ evento.get_tipo_display }}</li>
+            {% if evento.descripcion %}
+                <li><strong>Descripción:</strong> {{ evento.descripcion|truncatechars:100 }}</li>
+            {% endif %}
+        </ul>
+        <form method="post">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-danger">
+                <i class="bi bi-trash"></i> Eliminar
+            </button>
+            <a class="btn btn-outline-secondary" href="{% url 'horarios:calendario' %}?mes={{ evento.fecha.month }}&anio={{ evento.fecha.year }}">
+                Cancelar
+            </a>
+        </form>
+    </div>
+</div>
+{% endblock %}

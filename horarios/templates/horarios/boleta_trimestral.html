@@ -1,0 +1,92 @@
+{% extends 'horarios/base.html' %}
+
+{% block title %}Boleta Trimestral de {{ alumno.apellido_paterno }} {{ alumno.apellido_materno|default:'' }} {{ alumno.nombre }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2><i class="bi bi-file-earmark-text"></i> Boleta Trimestral</h2>
+        <p class="text-muted">{{ alumno.apellido_paterno }} {{ alumno.apellido_materno|default:'' }} {{ alumno.nombre }} | Matrícula: {{ alumno.matricula }} | Grupo: {{ alumno.grupo.nombre }}</p>
+        <p class="text-muted">Año escolar: {{ anio_escolar.nombre }}</p>
+    </div>
+    <div class="d-flex gap-2">
+        <a class="btn btn-outline-secondary" href="javascript:history.back()">Volver</a>
+        <a class="btn btn-danger" href="{% url 'horarios:pdf_boleta_trimestral' alumno.id %}"><i class="bi bi-file-pdf"></i> PDF</a>
+        <button class="btn btn-outline-primary" onclick="window.print()"><i class="bi bi-printer"></i> Imprimir</button>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-bordered mb-0">
+                <thead class="table-dark">
+                    <tr>
+                        <th>Materia</th>
+                        {% for t in trimestres %}
+                            <th class="text-center">{{ t.nombre }}</th>
+                        {% endfor %}
+                        <th class="text-center">Promedio Final</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for fila in filas %}
+                        <tr>
+                            <td>{{ fila.materia.nombre }}</td>
+                            {% for calif in fila.trimestres %}
+                                <td class="text-center">
+                                    {% if calif %}
+                                        {% if calif >= 6 %}
+                                            <span class="badge bg-success">{{ calif }}</span>
+                                        {% else %}
+                                            <span class="badge bg-danger">{{ calif }}</span>
+                                        {% endif %}
+                                    {% else %}
+                                        <span class="text-muted">—</span>
+                                    {% endif %}
+                                </td>
+                            {% endfor %}
+                            <td class="text-center">
+                                {% if fila.promedio_final %}
+                                    {% if fila.promedio_final >= 6 %}
+                                        <strong class="text-success">{{ fila.promedio_final }}</strong>
+                                    {% else %}
+                                        <strong class="text-danger">{{ fila.promedio_final }}</strong>
+                                    {% endif %}
+                                {% else %}
+                                    <span class="text-muted">—</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+                <tfoot class="table-secondary">
+                    <tr>
+                        <td class="fw-bold">Promedio del trimestre</td>
+                        {% for prom in promedios_por_trimestre %}
+                            <td class="text-center fw-bold">
+                                {% if prom %}
+                                    {{ prom }}
+                                {% else %}
+                                    —
+                                {% endif %}
+                            </td>
+                        {% endfor %}
+                        <td class="text-center fw-bold">
+                            {% if promedio_general_final %}
+                                {% if promedio_general_final >= 6 %}
+                                    <span class="text-success">{{ promedio_general_final }}</span>
+                                {% else %}
+                                    <span class="text-danger">{{ promedio_general_final }}</span>
+                                {% endif %}
+                            {% else %}
+                                —
+                            {% endif %}
+                        </td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

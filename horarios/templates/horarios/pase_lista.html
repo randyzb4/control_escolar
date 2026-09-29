@@ -1,0 +1,121 @@
+{% extends 'horarios/base.html' %}
+
+{% block title %}Pase de Lista{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-list-check"></i> Pase de Lista</h2>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <form method="get">
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label for="id_grupo" class="form-label">Grupo</label>
+                    <select class="form-select" id="id_grupo" name="grupo">
+                        <option value="" {% if not grupo_sel %}selected{% endif %}>Selecciona un grupo</option>
+                        {% for g in grupos %}
+                            <option value="{{ g.id }}" {% if grupo_sel == g.id|stringformat:"s" %}selected{% endif %}>{{ g.nombre }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label for="id_materia" class="form-label">Materia</label>
+                    <select class="form-select" id="id_materia" name="materia">
+                        <option value="" {% if not materia_sel %}selected{% endif %}>Selecciona una materia</option>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label for="fecha" class="form-label">Fecha</label>
+                    <input type="date" class="form-control" id="fecha" name="fecha" value="{{ fecha_sel|default:hoy }}">
+                </div>
+            </div>
+            <button type="submit" class="btn btn-primary"><i class="bi bi-cloud-upload"></i> Cargar Alumnos</button>
+        </form>
+    </div>
+</div>
+
+{% if alumnos_con_asist %}
+    <form method="post">
+        {% csrf_token %}
+        <input type="hidden" name="grupo" value="{{ grupo_sel }}">
+        <input type="hidden" name="materia" value="{{ materia_sel }}">
+        <input type="hidden" name="fecha" value="{{ fecha_sel }}">
+        <table class="table table-hover">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Matrícula</th>
+                    <th>Nombre</th>
+                    <th>Estado</th>
+                    <th>Observaciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for alumno, asistencia in alumnos_con_asist %}
+                    <tr class="{% if asistencia and asistencia.estado == 'presente' %}table-success{% elif asistencia and asistencia.estado == 'ausente' %}table-danger{% elif asistencia and asistencia.estado == 'retardo' %}table-warning{% elif asistencia and asistencia.estado == 'justificado' %}table-info{% endif %}">
+                        <td>{{ forloop.counter }}</td>
+                        <td>{{ alumno.matricula }}</td>
+                        <td>{{ alumno.apellido_paterno }} {{ alumno.apellido_materno|default:'' }} {{ alumno.nombre }}</td>
+                        <td>
+                            <select name="estado_{{ alumno.id }}" class="form-select form-select-sm estado-select">
+                                <option value="presente" {% if not asistencia or asistencia.estado == 'presente' %}selected{% endif %}>Presente</option>
+                                <option value="ausente" {% if asistencia.estado == 'ausente' %}selected{% endif %}>Ausente</option>
+                                <option value="retardo" {% if asistencia.estado == 'retardo' %}selected{% endif %}>Retardo</option>
+                                <option value="justificado" {% if asistencia.estado == 'justificado' %}selected{% endif %}>Justificado</option>
+                            </select>
+                        </td>
+                        <td><input type="text" name="obs_{{ alumno.id }}" value="{{ asistencia.observaciones|default:'' }}" class="form-control form-control-sm"></td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        <button type="submit" class="btn btn-primary"><i class="bi bi-save"></i> Guardar Asistencia</button>
+    </form>
+{% elif grupo_sel and materia_sel and fecha_sel %}
+    <div class="alert alert-warning">
+        No hay alumnos.
+    </div>
+{% endif %}
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const idGrupo = document.getElementById('id_grupo');
+        const idMateria = document.getElementById('id_materia');
+        const apiURL = "{% url 'horarios:materias_por_grupo' %}";
+
+        idGrupo.addEventListener('change', function() {
+            const grupoId = idGrupo.value;
+            if (grupoId) {
+                fetch(`${apiURL}?grupo=${grupoId}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        idMateria.innerHTML = '<option value="">Selecciona una materia</option>';
+                        if (data.materias.length > 0) {
+                            data.materias.forEach(materia => {
+                                idMateria.innerHTML += `<option value="${materia.id}">${materia.nombre}</option>`;
+                            });
+                        } else {
+                            idMateria.innerHTML += '<option value="" disabled>Sin materias</option>';
+                        }
+                    });
+            } else {
+                idMateria.innerHTML = '<option value="">Selecciona una materia</option>';
+            }
+        });
+
+        idGrupo.dispatchEvent(new Event('change'));
+
+        document.querySelectorAll('.estado-select').forEach(select => {
+            select.addEventListener('change', function() {
+                const row = this.closest('tr');
+                const estado = this.value;
+
+                row.classList.remove('table-success', 'table-danger', 'table-warning', 'table-info');
+                row.classList.add(`table-${estado}`);
+            });
+        });
+    });
+</script>
+{% endblock %}

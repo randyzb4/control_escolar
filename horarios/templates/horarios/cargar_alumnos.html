@@ -1,0 +1,48 @@
+{% extends 'horarios/base.html' %}
+
+{% block title %}Cargar Alumnos{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-upload"></i> Cargar Alumnos desde Excel</h2>
+    <a href="{% url 'horarios:dashboard' %}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left"></i> Volver
+    </a>
+</div>
+
+<div class="alert alert-info">
+    <i class="bi bi-info-circle"></i> <strong>Formatos aceptados:</strong>
+    <ul class="mb-0 mt-2">
+        <li><strong>Formato A (separado):</strong> matricula, nombre, apellido_paterno, apellido_materno, grupo, email</li>
+        <li><strong>Formato B (junto):</strong> matricula, nombre_completo, grupo, email (el sistema separa el nombre automáticamente)</li>
+    </ul>
+    <p class="mb-0 mt-2">El sistema detecta el formato automáticamente según los encabezados.</p>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <form method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            <div class="mb-3">
+                <label class="form-label">Archivo Excel (.xlsx)</label>
+                <input type="file" class="form-control" name="archivo" accept=".xlsx,.xls" required>
+            </div>
+            <button type="submit" class="btn btn-primary">
+                <i class="bi bi-cloud-upload"></i> Cargar Alumnos
+            </button>
+        </form>
+    </div>
+</div>
+
+<div class="card mt-4">
+    <div class="card-header">
+        <i class="bi bi-download"></i> Plantilla
+    </div>
+    <div class="card-body">
+        <p>Descarga la plantilla con AMBOS formatos de ejemplo (dos hojas en el mismo archivo).</p>
+        <a href="{% url 'horarios:descargar_plantilla_alumnos' %}" class="btn btn-success">
+            <i class="bi bi-file-earmark-excel"></i> Descargar Plantilla
+        </a>
+    </div>
+</div>
+{% endblock %}

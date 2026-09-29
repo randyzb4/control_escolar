@@ -1,0 +1,98 @@
+{% extends 'horarios/base.html' %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-speedometer2"></i> Dashboard</h2>
+    {% if user.perfil %}
+        <span class="badge bg-info">{{ user.perfil.get_rol_display }}</span>
+    {% endif %}
+</div>
+
+<!-- Tarjetas de resumen -->
+<div class="row g-4 mb-4">
+    <div class="col-md-4">
+        <div class="card h-100">
+            <div class="card-body text-center">
+                <i class="bi bi-person-badge fs-1 text-primary"></i>
+                <h3 class="mt-2">{{ total_profesores }}</h3>
+                <p class="text-muted mb-0">Profesores activos</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card h-100">
+            <div class="card-body text-center">
+                <i class="bi bi-people fs-1 text-success"></i>
+                <h3 class="mt-2">{{ total_grupos }}</h3>
+                <p class="text-muted mb-0">Grupos registrados</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card h-100">
+            <div class="card-body text-center">
+                <i class="bi bi-calendar-check fs-1 text-warning"></i>
+                <h3 class="mt-2">{{ total_asignaciones }}</h3>
+                <p class="text-muted mb-0">Asignaciones en el horario</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Acciones de Coordinador -->
+{% if user.is_authenticated and user.is_staff %}
+<div class="card mb-4">
+    <div class="card-header">
+        <i class="bi bi-lightning-charge"></i> Acciones de Coordinador
+    </div>
+    <div class="card-body">
+        <form method="post" action="{% url 'horarios:generar' %}" class="mb-3">
+            {% csrf_token %}
+            <button class="btn btn-primary" type="submit">
+                <i class="bi bi-magic"></i> Generar Horario Automáticamente
+            </button>
+        </form>
+        <hr>
+        <div class="d-flex flex-wrap gap-2">
+            <a class="btn btn-outline-primary" href="{% url 'horarios:configurar_horario' %}">
+                <i class="bi bi-sliders"></i> Configurar Horario Base
+            </a>
+            <a class="btn btn-outline-success" href="{% url 'horarios:cargar_alumnos' %}">
+                <i class="bi bi-upload"></i> Cargar Alumnos
+            </a>
+            <a class="btn btn-outline-dark" href="/admin/">
+                <i class="bi bi-gear"></i> Administración
+            </a>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Consultas -->
+<div class="card">
+    <div class="card-header">
+        <i class="bi bi-eye"></i> Consultas
+    </div>
+    <div class="card-body">
+        <div class="d-flex flex-wrap gap-2">
+            <a class="btn btn-outline-primary" href="{% url 'horarios:lista_grupos' %}">
+                <i class="bi bi-people"></i> Horarios por Grupo
+            </a>
+            <a class="btn btn-outline-primary" href="{% url 'horarios:lista_profesores' %}">
+                <i class="bi bi-person-badge"></i> Horarios por Profesor
+            </a>
+            <a class="btn btn-outline-secondary" href="{% url 'horarios:carga_profesores' %}">
+                <i class="bi bi-bar-chart"></i> Carga por Profesor
+            </a>
+            <a class="btn btn-outline-secondary" href="{% url 'horarios:resumen' %}">
+                <i class="bi bi-graph-up"></i> Resumen General
+            </a>
+            <a class="btn btn-outline-info" href="{% url 'horarios:lista_asignaciones' %}">
+                <i class="bi bi-list-ul"></i> Ver Asignaciones
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}

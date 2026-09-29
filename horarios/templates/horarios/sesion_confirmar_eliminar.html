@@ -1,0 +1,19 @@
+{% extends 'horarios/base.html' %}
+
+{% block title %}Eliminar Sesión{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header bg-danger text-white">
+        <i class="bi bi-exclamation-triangle"></i> Confirmar eliminación
+    </div>
+    <div class="card-body">
+        <p>¿Eliminar la sesión <strong>{{ sesion.numero }}</strong> del {{ sesion.fecha|date:"d/m/Y" }}?</p>
+        <form method="post">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-danger"><i class="bi bi-trash"></i> Eliminar</button>
+            <a href="{% url 'horarios:planeacion_editar' plan.id %}" class="btn btn-outline-secondary">Cancelar</a>
+        </form>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,110 @@
+{% extends 'horarios/base.html' %}
+
+{% block title %}{% if accion == 'crear' %}Nuevo Evento{% else %}Editar Evento{% endif %}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>
+        {% if accion == 'crear' %}
+            <i class="bi bi-plus-circle"></i> Nuevo Evento
+        {% else %}
+            <i class="bi bi-pencil"></i> Editar Evento
+        {% endif %}
+    </h2>
+    <a class="btn btn-outline-secondary" href="{% url 'horarios:calendario' %}">
+        <i class="bi bi-arrow-left"></i> Volver
+    </a>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <form method="post">
+            {% csrf_token %}
+
+            <div class="mb-3">
+                <label class="form-label">Título del evento *</label>
+                <input type="text" name="titulo" class="form-control" required
+                       value="{{ evento.titulo|default:'' }}"
+                       placeholder="Ej: Examen de Matemáticas">
+            </div>
+
+            <div class="row">
+                <div class="col-md-4 mb-3">
+                    <label class="form-label">Tipo *</label>
+                    <select name="tipo" class="form-select" required>
+                        {% for t in tipos %}
+                            <option value="{{ t.0 }}" {% if evento.tipo == t.0 %}selected{% endif %}>
+                                {{ t.1 }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label class="form-label">Fecha *</label>
+                    <input type="date" name="fecha" class="form-control" required
+                           value="{% if evento %}{{ evento.fecha|date:'Y-m-d' }}{% else %}{{ fecha_default }}{% endif %}">
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label class="form-label">Fecha fin (opcional)</label>
+                    <input type="date" name="fecha_fin" class="form-control"
+                           value="{% if evento.fecha_fin %}{{ evento.fecha_fin|date:'Y-m-d' }}{% endif %}">
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" name="todo_el_dia" id="todo_el_dia"
+                           {% if not evento or evento.todo_el_dia %}checked{% endif %}>
+                    <label class="form-check-label" for="todo_el_dia">
+                        Todo el día
+                    </label>
+                </div>
+            </div>
+
+            <div class="row" id="horas-container" style="display: none;">
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Hora inicio</label>
+                    <input type="time" name="hora_inicio" class="form-control"
+                           value="{% if evento.hora_inicio %}{{ evento.hora_inicio|time:'H:i' }}{% endif %}">
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Hora fin</label>
+                    <input type="time" name="hora_fin" class="form-control"
+                           value="{% if evento.hora_fin %}{{ evento.hora_fin|time:'H:i' }}{% endif %}">
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Descripción</label>
+                <textarea name="descripcion" rows="4" class="form-control"
+                          placeholder="Detalles adicionales del evento">{{ evento.descripcion|default:'' }}</textarea>
+            </div>
+
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-save"></i> Guardar
+                </button>
+                <a class="btn btn-outline-secondary" href="{% url 'horarios:calendario' %}">
+                    Cancelar
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const checkbox = document.getElementById('todo_el_dia');
+    const horasContainer = document.getElementById('horas-container');
+
+    function toggleHoras() {
+        horasContainer.style.display = checkbox.checked ? 'none' : 'flex';
+    }
+
+    checkbox.addEventListener('change', toggleHoras);
+    toggleHoras();
+});
+</script>
+{% endblock %}

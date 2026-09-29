@@ -1,0 +1,127 @@
+{% extends 'horarios/base.html' %}
+
+{% block title %}Configurar Horario Base{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-sliders"></i> Configurar Horario Base</h2>
+    <a class="btn btn-outline-secondary" href="{% url 'horarios:dashboard' %}">
+        <i class="bi bi-arrow-left"></i> Volver
+    </a>
+</div>
+
+<div class="alert alert-info">
+    <i class="bi bi-info-circle"></i>
+    Configura una vez el horario base y el sistema generará automáticamente todos los bloques
+    para los días seleccionados. Esto reemplazará TODOS los slots actuales.
+</div>
+
+<div class="card">
+    <div class="card-header">Parámetros</div>
+    <div class="card-body">
+        <form method="post">
+            {% csrf_token %}
+
+            <!-- Jornada -->
+            <div class="row">
+                <div class="col-md-4 mb-3">
+                    <label class="form-label">Hora de inicio</label>
+                    <input class="form-control" type="time" name="hora_inicio"
+                           value="{{ config.hora_inicio|time:'H:i' }}" required>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label class="form-label">Hora de fin</label>
+                    <input class="form-control" type="time" name="hora_fin"
+                           value="{{ config.hora_fin|time:'H:i' }}" required>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label class="form-label">Duración de cada bloque (minutos)</label>
+                    <select class="form-select" name="duracion_bloque">
+                        <option value="30" {% if config.duracion_bloque == 30 %}selected{% endif %}>30 minutos</option>
+                        <option value="40" {% if config.duracion_bloque == 40 %}selected{% endif %}>40 minutos</option>
+                        <option value="45" {% if config.duracion_bloque == 45 %}selected{% endif %}>45 minutos</option>
+                        <option value="50" {% if config.duracion_bloque == 50 %}selected{% endif %}>50 minutos (hora clase)</option>
+                        <option value="60" {% if config.duracion_bloque == 60 %}selected{% endif %}>60 minutos (1 hora)</option>
+                        <option value="90" {% if config.duracion_bloque == 90 %}selected{% endif %}>90 minutos</option>
+                        <option value="120" {% if config.duracion_bloque == 120 %}selected{% endif %}>120 minutos</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Días activos -->
+            <div class="mb-3">
+                <label class="form-label">Días activos</label>
+                <div class="d-flex flex-wrap gap-3">
+                    {% for d in dias_disponibles %}
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="dias"
+                                   value="{{ d.num }}" id="dia_{{ d.num }}"
+                                   {% if d.activo %}checked{% endif %}>
+                            <label class="form-check-label" for="dia_{{ d.num }}">{{ d.nombre }}</label>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Recesos -->
+            <div class="card mt-4">
+                <div class="card-header">
+                    <i class="bi bi-cup-hot"></i> Recesos (opcional)
+                </div>
+                <div class="card-body">
+                    <p class="text-muted small">
+                        Si defines recesos, los slots se generarán evitando esos rangos horarios.
+                    </p>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <h6>Receso 1</h6>
+                            <div class="row">
+                                <div class="col-6">
+                                    <label class="form-label">Inicio</label>
+                                    <input type="time" name="receso1_inicio" class="form-control"
+                                           value="{% if config.receso1_inicio %}{{ config.receso1_inicio|time:'H:i' }}{% endif %}">
+                                </div>
+                                <div class="col-6">
+                                    <label class="form-label">Fin</label>
+                                    <input type="time" name="receso1_fin" class="form-control"
+                                           value="{% if config.receso1_fin %}{{ config.receso1_fin|time:'H:i' }}{% endif %}">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <h6>Receso 2</h6>
+                            <div class="row">
+                                <div class="col-6">
+                                    <label class="form-label">Inicio</label>
+                                    <input type="time" name="receso2_inicio" class="form-control"
+                                           value="{% if config.receso2_inicio %}{{ config.receso2_inicio|time:'H:i' }}{% endif %}">
+                                </div>
+                                <div class="col-6">
+                                    <label class="form-label">Fin</label>
+                                    <input type="time" name="receso2_fin" class="form-control"
+                                           value="{% if config.receso2_fin %}{{ config.receso2_fin|time:'H:i' }}{% endif %}">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Botón guardar -->
+            <div class="mt-4">
+                <button class="btn btn-primary" type="submit">
+                    <i class="bi bi-magic"></i> Guardar y Generar Slots
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Slots actuales -->
+<div class="card mt-4">
+    <div class="card-body">
+        <h5>Slots actuales: <span class="badge bg-primary">{{ slots_generados }}</span></h5>
+        <p class="text-muted mb-0">Estos slots se usarán al generar el horario automáticamente.</p>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,89 @@
+{% extends 'horarios/base.html' %}
+
+{% block title %}Configuración de la Institución{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-gear"></i> Configuración de la Institución</h2>
+    <a class="btn btn-outline-secondary" href="{% url 'horarios:dashboard' %}">
+        <i class="bi bi-arrow-left"></i> Volver
+    </a>
+</div>
+
+<form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card mb-3">
+                <div class="card-header"><i class="bi bi-building"></i> Identidad</div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="form-label">Nombre de la institución *</label>
+                        <input class="form-control" type="text" name="nombre_institucion" required value="{{ config.nombre_institucion }}">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Lema o misión</label>
+                        <input class="form-control" type="text" name="lema" value="{{ config.lema|default:'' }}">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Director o responsable</label>
+                        <input class="form-control" type="text" name="director" value="{{ config.director|default:'' }}">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Ciclo escolar</label>
+                        <input class="form-control" type="text" name="ciclo_escolar" placeholder="Ej: 2025-2026" value="{{ config.ciclo_escolar|default:'' }}">
+                    </div>
+                </div>
+            </div>
+            <div class="card mb-3">
+                <div class="card-header"><i class="bi bi-telephone"></i> Contacto</div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="form-label">Dirección</label>
+                        <input class="form-control" type="text" name="direccion" value="{{ config.direccion|default:'' }}">
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Teléfono</label>
+                            <input class="form-control" type="text" name="telefono" value="{{ config.telefono|default:'' }}">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Email</label>
+                            <input class="form-control" type="email" name="email" value="{{ config.email|default:'' }}">
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Sitio web</label>
+                        <input class="form-control" type="url" name="sitio_web" value="{{ config.sitio_web|default:'' }}">
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card mb-3">
+                <div class="card-header"><i class="bi bi-image"></i> Logo</div>
+                <div class="card-body text-center">
+                    {% if config.logo %}
+                        <img src="{{ config.logo.url }}" alt="Logo" style="max-width: 100%; max-height: 150px; margin-bottom: 10px;">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="quitar_logo" id="quitar_logo">
+                            <label class="form-check-label" for="quitar_logo">Quitar logo actual</label>
+                        </div>
+                    {% else %}
+                        <p class="text-muted">No hay logo cargado</p>
+                    {% endif %}
+                    <div class="mb-3 mt-3">
+                        <label class="form-label">Subir nuevo logo</label>
+                        <input class="form-control" type="file" name="logo" accept="image/*">
+                        <small class="text-muted">Formatos: JPG, PNG, GIF. Se usará en los PDFs.</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="d-flex gap-2">
+        <button class="btn btn-primary" type="submit"><i class="bi bi-save"></i> Guardar configuración</button>
+        <a class="btn btn-outline-secondary" href="{% url 'horarios:dashboard' %}">Cancelar</a>
+    </div>
+</form>
+{% endblock %}

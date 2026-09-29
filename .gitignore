@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.py[cod]
+*.so
+*.egg-info/
+
+# Entorno virtual
+venv/
+env/
+.venv/
+
+# Base de datos local
+db.sqlite3
+db_data.json
+db_data_utf8.json
+
+# Archivos estáticos y media
+staticfiles/
+media/
+
+# Variables de entorno
+.env
+
+# IDE
+.vscode/
+.idea/
+
+# Sistema operativo
+.DS_Store
+Thumbs.db

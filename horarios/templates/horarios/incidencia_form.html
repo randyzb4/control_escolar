@@ -1,0 +1,117 @@
+{% extends 'horarios/base.html' %}
+
+{% block title %}{% if accion == 'crear' %}Nueva Incidencia{% else %}Editar Incidencia{% endif %}{% endblock %}
+
+{% block content %}
+<h2><i class="bi bi-exclamation-triangle"></i> {% if accion == 'crear' %}Nueva Incidencia{% else %}Editar Incidencia{% endif %}</h2>
+
+<form method="post">
+    {% csrf_token %}
+    {% if accion == 'crear' %}
+        <div class="mb-3">
+            <label for="id_grupo_materia" class="form-label">Grupo y Materia</label>
+            <select class="form-select" id="id_grupo_materia" name="grupo_materia" onchange="fetchAlumnosPorGM()">
+                <option value="">Selecciona grupo y materia</option>
+                {% for gm in gms %}
+                    <option value="{{ gm.id }}">{{ gm.grupo.nombre }} - {{ gm.materia.nombre }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="mb-3">
+            <label for="id_alumno" class="form-label">Alumno</label>
+            <select class="form-select" id="id_alumno" name="alumno" required>
+                <option value="">Selecciona grupo y materia primero</option>
+            </select>
+        </div>
+        <div class="mb-3">
+            <label for="fecha" class="form-label">Fecha</label>
+            <input type="date" class="form-control" id="fecha" name="fecha" value="{{ hoy }}" required>
+        </div>
+        <div class="mb-3">
+            <label for="tipo_reporte" class="form-label">Tipo de Reporte</label>
+            <select class="form-select" id="tipo_reporte" name="tipo_reporte" required>
+                {% for t in tipos %}
+                    <option value="{{ t.0 }}">{{ t.1 }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="mb-3">
+            <label for="resumen" class="form-label">Resumen</label>
+            <textarea class="form-control" id="resumen" name="resumen" rows="4" required></textarea>
+        </div>
+    {% else %}
+        <input type="hidden" name="alumno" value="{{ incidencia.alumno.id }}">
+        <input type="hidden" name="grupo_materia" value="{{ incidencia.grupo_materia.id }}">
+        <div class="mb-3">
+            <label class="form-label">Alumno</label>
+            <p>{{ incidencia.alumno.apellido_paterno }} {{ incidencia.alumno.apellido_materno|default:'' }} {{ incidencia.alumno.nombre }}</p>
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Grupo</label>
+            <p>{{ incidencia.grupo_materia.grupo.nombre }}</p>
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Materia</label>
+            <p>{{ incidencia.grupo_materia.materia.nombre }}</p>
+        </div>
+        <div class="mb-3">
+            <label for="fecha" class="form-label">Fecha</label>
+            <input type="date" class="form-control" id="fecha" name="fecha" value="{{ incidencia.fecha|date:'Y-m-d' }}" required>
+        </div>
+        <div class="mb-3">
+            <label for="tipo_reporte" class="form-label">Tipo de Reporte</label>
+            <select class="form-select" id="tipo_reporte" name="tipo_reporte" required>
+                {% for t in tipos %}
+                    <option value="{{ t.0 }}" {% if incidencia.tipo_reporte == t.0 %}selected{% endif %}>{{ t.1 }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="mb-3">
+            <label for="resumen" class="form-label">Resumen</label>
+            <textarea class="form-control" id="resumen" name="resumen" rows="4" required>{{ incidencia.resumen }}</textarea>
+        </div>
+    {% endif %}
+    <button type="submit" class="btn btn-primary">Guardar</button>
+    <a href="{% url 'horarios:incidencias_lista' %}" class="btn btn-secondary ms-2">Cancelar</a>
+</form>
+
+{% if accion == 'crear' %}
+<script>
+    function fetchAlumnosPorGM() {
+        const grupoMateriaSelect = document.getElementById('id_alumno');
+        grupoMateriaSelect.innerHTML = '<option value="">Selecciona un alumno</option>';
+
+        const grupoMateriaId = document.getElementById('id_grupo_materia').value;
+        if (grupoMateriaId) {
+            const apiUrl = "{% url 'horarios:alumnos_por_gm' %}?gm=" + grupoMateriaId;
+            fetch(apiUrl)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.alumnos.length > 0) {
+                        data.alumnos.forEach(alumno => {
+                            const option = document.createElement('option');
+                            option.value = alumno.id;
+                            option.textContent = `${alumno.nombre} (${alumno.matricula})`;
+                            grupoMateriaSelect.appendChild(option);
+                        });
+                    } else {
+                        const option = document.createElement('option');
+                        option.value = '';
+                        option.textContent = 'Sin alumnos';
+                        option.disabled = true;
+                        grupoMateriaSelect.appendChild(option);
+                    }
+                })
+                .catch(error => console.error('Error fetching alumnos:', error));
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        const grupoMateriaSelect = document.getElementById('id_grupo_materia');
+        if (grupoMateriaSelect.value) {
+            fetchAlumnosPorGM();
+        }
+    });
+</script>
+{% endif %}
+{% endblock %}

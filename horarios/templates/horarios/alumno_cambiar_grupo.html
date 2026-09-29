@@ -1,0 +1,31 @@
+{% extends 'horarios/base.html' %}
+
+{% block title %}Cambiar Alumno de Grupo{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <i class="bi bi-arrow-left-right"></i> Cambiar de grupo
+    </div>
+    <div class="card-body">
+        <p class="text-muted">Alumno: <strong>{{ alumno.apellido_paterno }} {{ alumno.apellido_materno|default:'' }} {{ alumno.nombre }}</strong></p>
+        <p class="text-muted">Grupo actual: <strong>{{ grupo_original.nombre|default:"Sin grupo" }}</strong></p>
+        <form method="post">
+            {% csrf_token %}
+            <div class="mb-3">
+                <label class="form-label">Nuevo grupo</label>
+                <select class="form-select" name="nuevo_grupo" required>
+                    <option value="">Selecciona un grupo</option>
+                    {% for g in grupos %}
+                        <option value="{{ g.id }}" {% if grupo_original and g.id == grupo_original.id %}disabled{% endif %}>{{ g.nombre }}{% if grupo_original and g.id == grupo_original.id %} (actual){% endif %}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="d-flex gap-2">
+                <button class="btn btn-primary" type="submit"><i class="bi bi-arrow-right"></i> Cambiar de grupo</button>
+                <a class="btn btn-outline-secondary" href="{% if grupo_original %}{% url 'horarios:lista_alumnos_grupo' grupo_original.id %}{% else %}{% url 'horarios:dashboard' %}{% endif %}">Cancelar</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

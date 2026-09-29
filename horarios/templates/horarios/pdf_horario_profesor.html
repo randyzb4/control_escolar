@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Horario {{ profesor.nombre }}</title>
+    <style>
+        @page { size: A4 landscape; margin: 1cm; }
+        body { font-family: Arial; font-size: 10pt; }
+        h1 { text-align: center; color: #2c3e50; }
+        p.subtitulo { text-align: center; color: #7f8c8d; font-size: 9pt; margin-bottom: 20px; }
+        table { width: 100%; border-collapse: collapse; }
+        th { background-color: #2c3e50; color: white; padding: 6px; border: 1px solid #333; }
+        td { padding: 6px; border: 1px solid #333; text-align: center; vertical-align: top; }
+        td.hora { background-color: #ecf0f1; font-weight: bold; width: 100px; }
+        .materia { font-weight: bold; }
+        .profesor { color: #555; font-style: italic; font-size: 8pt; }
+    </style>
+</head>
+<body>
+    <h1>Horario del Profesor: {{ profesor.nombre }}</h1>
+    <p class="subtitulo">Generado el {% now "d/m/Y H:i" %}</p>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Hora</th>
+                {% for dia in dias %}
+                    {% if dia == 1 %}<th>Lunes</th>{% elif dia == 2 %}<th>Martes</th>{% elif dia == 3 %}<th>Miércoles</th>{% elif dia == 4 %}<th>Jueves</th>{% elif dia == 5 %}<th>Viernes</th>{% endif %}
+                {% endfor %}
+            </tr>
+        </thead>
+        <tbody>
+            {% for fila in filas %}
+                <tr>
+                    <td class="hora">{{ fila.hora_inicio|time:"H:i" }} - {{ fila.hora_fin|time:"H:i" }}</td>
+                    {% for celda in fila.celdas %}
+                        {% if celda %}
+                            <td>
+                                <div class="materia">{{ celda.grupo_materia.materia.nombre }}</div>
+                                <div class="profesor">{{ celda.grupo_materia.grupo.nombre }}</div>
+                            </td>
+                        {% else %}
+                            <td>—</td>
+                        {% endif %}
+                    {% endfor %}
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</body>
+</html>

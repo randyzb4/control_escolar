@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Calificaciones {{ grupo.nombre }}</title>
+    <style>
+        @page { size: A4 landscape; margin: 1cm; }
+        body { font-family: Arial, sans-serif; font-size: 9pt; color: #333; }
+
+        .header-institucion {
+            text-align: center;
+            border-bottom: 2px solid #2c3e50;
+            padding-bottom: 10px;
+            margin-bottom: 15px;
+        }
+        .header-institucion h2 {
+            font-size: 14pt;
+            color: #2c3e50;
+            margin: 4px 0 2px 0;
+        }
+        .header-institucion p {
+            font-size: 9pt;
+            color: #555;
+            margin: 2px 0;
+        }
+        .header-institucion img {
+            height: 40px;
+            width: auto;
+            margin-bottom: 5px;
+        }
+
+        h1 { text-align: center; font-size: 14pt; color: #2c3e50; margin-bottom: 5px; }
+        .subtitulo { text-align: center; color: #7f8c8d; font-size: 9pt; margin-bottom: 15px; }
+        table { width: 100%; border-collapse: collapse; }
+        th { background-color: #2c3e50; color: white; border: 1px solid #333; padding: 5px; font-size: 8pt; }
+        td { border: 1px solid #333; padding: 4px; text-align: center; font-size: 8pt; }
+        td.alumno { text-align: left; }
+        .aprobado { color: #27ae60; font-weight: bold; }
+        .reprobado { color: #c0392b; font-weight: bold; }
+        tfoot { background-color: #ecf0f1; font-weight: bold; }
+        .footer { text-align: center; margin-top: 30px; font-size: 8pt; color: #7f8c8d; }
+    </style>
+</head>
+<body>
+    <div class="header-institucion">
+        {% if logo_base64 %}
+            <img src="{{ logo_base64 }}" alt="Logo">
+        {% endif %}
+        <h2>{{ config_institucion.nombre_institucion|default:"Institución" }}</h2>
+        {% if config_institucion.ciclo_escolar %}
+            <p>Ciclo escolar: {{ config_institucion.ciclo_escolar }}</p>
+        {% endif %}
+    </div>
+
+    <h1>Calificaciones del Grupo: {{ grupo.nombre }}</h1>
+    <p class="subtitulo">
+        Periodo: {{ periodo_sel.nombre|default:'Sin periodo' }} — Generado el {% now 'd/m/Y H:i' %}
+    </p>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Alumno</th>
+                {% for m in materias %}
+                    <th class="text-center">{{ m.nombre }}</th>
+                {% endfor %}
+                <th class="text-center">Promedio</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for fila in filas %}
+                <tr>
+                    <td class="alumno">{{ fila.alumno.apellido_paterno }} {{ fila.alumno.apellido_materno|default:'' }} {{ fila.alumno.nombre }}</td>
+                    {% for calif in fila.calificaciones %}
+                        <td>{{ calif|default:"—" }}</td>
+                    {% endfor %}
+                    <td>{{ fila.promedio|default:"—" }}</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+        <tfoot>
+            <tr>
+                <td>Promedio del grupo</td>
+                {% for prom in promedios_materia %}
+                    <td>{{ prom|default:"—" }}</td>
+                {% endfor %}
+                <td>{{ promedio_general|default:"—" }}</td>
+            </tr>
+        </tfoot>
+    </table>
+
+    <div class="footer">{{ config_institucion.nombre_institucion|default:"Sistema de Horarios Académicos" }}</div>
+</body>
+</html>

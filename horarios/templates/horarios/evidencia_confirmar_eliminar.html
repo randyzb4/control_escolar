@@ -1,0 +1,28 @@
+{% extends 'horarios/base.html' %}
+
+{% block title %}Eliminar Evidencia{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header bg-danger text-white">
+        <i class="bi bi-exclamation-triangle"></i> Confirmar eliminación
+    </div>
+    <div class="card-body">
+        <p>¿Estás seguro de que quieres eliminar esta evidencia?</p>
+        <ul>
+            <li>Nombre: {{ evidencia.nombre }}</li>
+            <li>Tipo: {{ evidencia.get_tipo_display }}</li>
+            <li>Porcentaje: {{ evidencia.porcentaje }}%</li>
+            <li>Fecha: {{ evidencia.fecha|date:"d/m/Y" }}</li>
+            <li>Grupo: {{ evidencia.grupo_materia.grupo.nombre }}</li>
+            <li>Materia: {{ evidencia.grupo_materia.materia.nombre }}</li>
+        </ul>
+        <p class="text-danger">Se eliminarán también todas las calificaciones asociadas.</p>
+        <form method="post">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-danger">Eliminar</button>
+            <a href="{% url 'horarios:desempeno_grupo' evidencia.grupo_materia.grupo.id %}?materia={{ evidencia.grupo_materia.id }}&periodo={{ evidencia.periodo.id }}" class="btn btn-secondary ms-2">Cancelar</a>
+        </form>
+    </div>
+</div>
+{% endblock %}

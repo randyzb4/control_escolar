@@ -1,0 +1,30 @@
+{% extends 'horarios/base.html' %}
+
+{% block title %}Grupos{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-people"></i> Grupos</h2>
+    <a href="{% url 'horarios:dashboard' %}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Volver</a>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        {% if grupos %}
+            <ul class="list-group list-group-flush">
+                {% for grupo in grupos %}
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <span><i class="bi bi-people-fill text-primary"></i> {{ grupo.nombre }}</span>
+                        <a href="{% url 'horarios:horario_grupo' grupo.id %}" class="btn btn-sm btn-primary">Ver horario</a>
+                        <a class="btn btn-sm btn-outline-primary" href="{% url 'horarios:lista_alumnos_grupo' grupo.id %}">
+    <i class="bi bi-people"></i> Alumnos
+</a>
+                    </li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p class="text-muted text-center">No hay grupos registrados.</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

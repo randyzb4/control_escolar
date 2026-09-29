@@ -1,0 +1,119 @@
+{% extends 'horarios/base.html' %}
+
+{% block title %}Calificaciones de {{ grupo.nombre }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2><i class="bi bi-table"></i> Calificaciones del grupo: {{ grupo.nombre }}</h2>
+        <p class="text-muted mb-0">
+            {% if periodo_sel %} Periodo: <strong>{{ periodo_sel.nombre }}</strong>{% else %}Sin periodo seleccionado{% endif %}
+        </p>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="{% url 'horarios:lista_alumnos_grupo' grupo.id %}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Volver</a>
+        <a href="{% url 'horarios:pdf_calificaciones_grupo' grupo.id %}{% if periodo_sel %}?periodo={{ periodo_sel.id }}{% endif %}" class="btn btn-danger"><i class="bi bi-file-pdf"></i> PDF</a>
+        <button class="btn btn-outline-primary" onclick="window.print()"><i class="bi bi-printer"></i> Imprimir</button>
+    </div>
+</div>
+
+{% if es_profesor and not es_coordinador %}
+    <div class="alert alert-info">
+        <i class="bi bi-info-circle"></i>
+        Estás viendo solo las calificaciones de las materias que impartes.
+    </div>
+{% endif %}
+
+{% if es_coordinador %}
+    <div class="alert alert-secondary">
+        <i class="bi bi-eye"></i>
+        Vista de coordinador: mostrando TODAS las materias del grupo.
+    </div>
+{% endif %}
+
+<form method="get" class="mb-4">
+    <div class="row g-3">
+        <div class="col-md-6">
+            <label class="form-label">Periodo</label>
+            <select name="periodo" class="form-select" onchange="this.form.submit()">
+                {% for p in periodos %}
+                    <option value="{{ p.id }}" {% if periodo_sel and p.id == periodo_sel.id %}selected{% endif %}>{{ p.nombre }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-6 d-flex align-items-end">
+            <button type="submit" class="btn btn-primary">Filtrar</button>
+        </div>
+    </div>
+</form>
+
+{% if filas %}
+    <div class="card">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-bordered table-sm mb-0">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>Alumno</th>
+                            {% for m in materias %}
+                                <th class="text-center">{{ m.nombre }}</th>
+                            {% endfor %}
+                            <th class="text-center">Promedio</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for fila in filas %}
+                            <tr>
+                                <td>
+                                    <a href="{% url 'horarios:boleta_alumno' fila.alumno.id %}">{{ fila.alumno.apellido_paterno }} {{ fila.alumno.apellido_materno|default:'' }} {{ fila.alumno.nombre }}</a>
+                                </td>
+                                {% for calif in fila.calificaciones %}
+                                    <td class="text-center">
+                                        {% if calif %}
+                                            {% if calif >= 6 %}
+                                                <span class="badge bg-success">{{ calif }}</span>
+                                            {% else %}
+                                                <span class="badge bg-danger">{{ calif }}</span>
+                                            {% endif %}
+                                        {% else %}
+                                            <span class="text-muted">—</span>
+                                        {% endif %}
+                                    </td>
+                                {% endfor %}
+                                <td class="text-center">
+                                    {% if fila.promedio %}
+                                        {% if fila.promedio >= 6 %}
+                                            <strong class="text-success">{{ fila.promedio }}</strong>
+                                        {% else %}
+                                            <strong class="text-danger">{{ fila.promedio }}</strong>
+                                        {% endif %}
+                                    {% else %}
+                                        <span class="text-muted">—</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                    <tfoot class="table-secondary">
+                        <tr>
+                            <td class="fw-bold">Promedio del grupo</td>
+                            {% for prom in promedios_materia %}
+                                <td class="text-center fw-bold">
+                                    {% if prom %}{{ prom }}{% else %}—{% endif %}
+                                </td>
+                            {% endfor %}
+                            <td class="text-center fw-bold">
+                                {% if promedio_general %}{{ promedio_general }}{% else %}—{% endif %}
+                            </td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+    </div>
+{% else %}
+    <div class="alert alert-info">
+        No hay alumnos o calificaciones en este periodo.
+    </div>
+{% endif %}
+{% endblock %}

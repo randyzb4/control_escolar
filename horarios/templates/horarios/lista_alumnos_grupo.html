@@ -1,0 +1,134 @@
+{% extends 'horarios/base.html' %}
+
+{% block title %}Alumnos de {{ grupo.nombre }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2><i class="bi bi-people"></i> Alumnos del grupo: {{ grupo.nombre }}</h2>
+        <p class="text-muted mb-0">Total: <strong>{{ alumnos|length }}</strong> alumnos</p>
+    </div>
+    <div class="d-flex gap-2 flex-wrap">
+        <a class="btn btn-outline-secondary" href="{% url 'horarios:lista_grupos' %}">
+            <i class="bi bi-arrow-left"></i> Volver
+        </a>
+        <a class="btn btn-success" href="{% url 'horarios:alumno_crear' grupo.id %}">
+            <i class="bi bi-person-plus"></i> Agregar alumno
+        </a>
+        <a class="btn btn-primary" href="{% url 'horarios:calificaciones_grupo' grupo.id %}">
+            <i class="bi bi-table"></i> Calificaciones del grupo
+        </a>
+        <a class="btn btn-info" href="{% url 'horarios:asistencias_grupo' grupo.id %}">
+            <i class="bi bi-clipboard-check"></i> Asistencias del grupo
+        </a>
+
+        <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#modalListaAsistencia">
+    <i class="bi bi-file-pdf"></i> Lista imprimible
+</button>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body p-0">
+        {% if alumnos %}
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>#</th>
+                            <th>Matrícula</th>
+                            <th>Nombre</th>
+                            <th class="text-center">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for alumno in alumnos %}
+                            <tr>
+                                <td>{{ forloop.counter }}</td>
+                                <td>{{ alumno.matricula }}</td>
+                                <td>{{ alumno.apellido_paterno }} {{ alumno.apellido_materno|default:'' }} {{ alumno.nombre }}</td>
+                                <td class="text-center">
+                                    <div class="d-flex gap-1 justify-content-center flex-wrap">
+                                        <a class="btn btn-sm btn-primary" href="{% url 'horarios:boleta_alumno' alumno.id %}" title="Ver boleta">
+                                            <i class="bi bi-file-earmark-text"></i>
+                                        </a>
+                                        <a class="btn btn-sm btn-danger" href="{% url 'horarios:pdf_boleta_alumno' alumno.id %}" title="Descargar PDF">
+                                            <i class="bi bi-file-pdf"></i>
+                                        </a>
+                                        <a class="btn btn-sm btn-warning" href="{% url 'horarios:alumno_editar' alumno.id %}" title="Editar">
+                                            <i class="bi bi-pencil"></i>
+                                        </a>
+                                        <a class="btn btn-sm btn-info" href="{% url 'horarios:alumno_cambiar_grupo' alumno.id %}" title="Cambiar de grupo">
+                                            <i class="bi bi-arrow-left-right"></i>
+                                        </a>
+                                        <a class="btn btn-sm btn-outline-danger" href="{% url 'horarios:alumno_eliminar' alumno.id %}" title="Eliminar">
+                                            <i class="bi bi-trash"></i>
+                                        </a>
+
+                                        </a>
+    <a class="btn btn-sm btn-outline-info" href="{% url 'horarios:boleta_trimestral' alumno.id %}" title="Boleta trimestral">
+        <i class="bi bi-calendar-check"></i>
+    </a>
+                                    </div>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="p-4 text-center">
+                <p class="text-muted">No hay alumnos en este grupo.</p>
+                <a class="btn btn-success" href="{% url 'horarios:alumno_crear' grupo.id %}">
+                    <i class="bi bi-person-plus"></i> Agregar primer alumno
+                </a>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Modal para generar lista de asistencia imprimible -->
+<div class="modal fade" id="modalListaAsistencia" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="bi bi-file-pdf"></i> Imprimir lista de asistencia
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-muted">Selecciona el mes y año:</p>
+                <form method="get" action="{% url 'horarios:pdf_lista_asistencia' grupo.id %}" target="_blank">
+                    <div class="row g-3">
+                        <div class="col-6">
+                            <label class="form-label">Mes</label>
+                            <select name="mes" class="form-select">
+                                <option value="1">Enero</option>
+                                <option value="2">Febrero</option>
+                                <option value="3">Marzo</option>
+                                <option value="4">Abril</option>
+                                <option value="5">Mayo</option>
+                                <option value="6">Junio</option>
+                                <option value="7">Julio</option>
+                                <option value="8">Agosto</option>
+                                <option value="9">Septiembre</option>
+                                <option value="10">Octubre</option>
+                                <option value="11">Noviembre</option>
+                                <option value="12">Diciembre</option>
+                            </select>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label">Año</label>
+                            <input type="number" name="anio" class="form-control" value="2026" min="2020" max="2100">
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-danger mt-3 w-100">
+                        <i class="bi bi-file-pdf"></i> Generar PDF
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

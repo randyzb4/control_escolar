@@ -1,0 +1,27 @@
+{% extends 'horarios/base.html' %}
+
+{% block title %}Eliminar Alumno{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header bg-danger text-white">
+        <i class="bi bi-exclamation-triangle"></i> Confirmar eliminación
+    </div>
+    <div class="card-body">
+        <p>¿Estás seguro de que quieres eliminar a este alumno?</p>
+        <ul>
+            <li>Nombre: {{ alumno.apellido_paterno }} {{ alumno.apellido_materno|default:'' }} {{ alumno.nombre }}</li>
+            <li>Matrícula: {{ alumno.matricula }}</li>
+            <li>Grupo: {{ alumno.grupo.nombre|default:"Sin grupo" }}</li>
+        </ul>
+        <div class="alert alert-warning">
+            <i class="bi bi-exclamation-triangle"></i> Se eliminarán también todas sus calificaciones, asistencias e incidencias asociadas.
+        </div>
+        <form method="post">
+            {% csrf_token %}
+            <button class="btn btn-danger" type="submit"><i class="bi bi-trash"></i> Sí, eliminar</button>
+            <a class="btn btn-outline-secondary" href="{% url 'horarios:lista_alumnos_grupo' grupo.id %}">Cancelar</a>
+        </form>
+    </div>
+</div>
+{% endblock %}

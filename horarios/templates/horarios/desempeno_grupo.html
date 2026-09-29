@@ -1,0 +1,172 @@
+{% extends 'horarios/base.html' %}
+
+{% block title %}Desempeño de {{ grupo.nombre }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>Desempeño del grupo: {{ grupo.nombre }}</h2>
+    <div class="d-flex gap-2">
+        <a class="btn btn-outline-secondary" href="{% url 'horarios:desempeno_seleccionar' %}">
+            <i class="bi bi-arrow-left"></i> Volver
+        </a>
+        <a class="btn btn-warning" href="{% url 'horarios:desempeno_pendientes' grupo.id %}?materia={{ gm.id }}&periodo={{ periodo.id }}">
+            <i class="bi bi-exclamation-circle"></i> Pendientes
+        </a>
+        <a class="btn btn-primary" href="{% url 'horarios:evidencia_crear' grupo.id %}?materia={{ gm.id }}&periodo={{ periodo.id }}">
+            <i class="bi bi-plus-circle"></i> Nueva evidencia
+        </a>
+    </div>
+</div>
+
+{% if suma_porcentajes != 100 %}
+    <div class="alert alert-warning">
+        <i class="bi bi-exclamation-triangle"></i> La suma de porcentajes no es 100%.
+    </div>
+{% endif %}
+
+<form method="get" class="mb-4">
+    <div class="input-group">
+        <select name="materia" class="form-select" onchange="this.form.submit()">
+            <option value="">Selecciona una materia</option>
+            {% for m in materias %}
+                <option value="{{ m.id }}" {% if m.id == gm.materia.id %}selected{% endif %}>{{ m.nombre }}</option>
+            {% endfor %}
+        </select>
+        <select name="periodo" class="form-select" onchange="this.form.submit()">
+            <option value="">Selecciona un periodo</option>
+            {% for p in periodos %}
+                <option value="{{ p.id }}" {% if p.id == periodo.id %}selected{% endif %}>{{ p.nombre }}</option>
+            {% endfor %}
+        </select>
+    </div>
+</form>
+
+{% if evidencias %}
+    <div class="card">
+        <div class="card-header">
+            <h5 class="card-title">Evidencias</h5>
+        </div>
+        <div class="card-body">
+            <table class="table table-striped">
+                <thead class="table-dark">
+                    <tr>
+                        <th rowspan="2">Alumno</th>
+                        {% for e in evidencias %}
+                            <th class="text-center">
+                                {{ e.nombre }}<br>
+                                <small>{{ e.porcentaje }}%</small><br>
+                                <div class="mt-1 d-flex justify-content-center gap-1">
+                                    <button type="button" class="btn btn-link" data-bs-toggle="modal" data-bs-target="#modalEvidencia{{ e.id }}">
+                                        <i class="bi bi-eye"></i>
+                                    </button>
+                                    <a href="{% url 'horarios:capturar_desempeno' e.id %}" class="btn btn-success">
+                                        <i class="bi bi-pencil-square"></i>
+                                    </a>
+                                    <a href="{% url 'horarios:evidencia_editar' e.id %}" class="btn btn-warning">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+                                    <a href="{% url 'horarios:evidencia_eliminar' e.id %}" class="btn btn-danger">
+                                        <i class="bi bi-trash"></i>
+                                    </a>
+                                </div>
+                            </th>
+                        {% endfor %}
+                        <th class="text-center bg-secondary" rowspan="2">Subtotal</th>
+                        <th class="text-center bg-primary" rowspan="2">Total</th>
+                        <th class="text-center bg-success" rowspan="2">Boleta</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for fila in filas %}
+                        <tr>
+                            <td>{{ fila.alumno.apellido_paterno }} {{ fila.alumno.apellido_materno|default:'' }} {{ fila.alumno.nombre }}</td>
+                            {% for ce in fila.calificaciones %}
+                                <td class="text-center">
+                                    {% if ce and ce.porcentaje_obtenido %}
+                                        <span class="badge bg-success">{{ ce.porcentaje_obtenido }}%</span>
+                                    {% else %}
+                                        <span class="text-muted">—</span>
+                                    {% endif %}
+                                </td>
+                            {% endfor %}
+                            <td class="text-center fw-bold bg-light">{{ fila.subtotal|floatformat:1 }}%</td>
+                            <td class="text-center">
+                                {% if fila.total == 50 %}
+                                    <span class="badge bg-danger fs-6">{{ fila.total }}%</span>
+                                {% elif fila.total >= 70 %}
+                                    <span class="badge bg-success fs-6">{{ fila.total }}%</span>
+                                {% else %}
+                                    <span class="badge bg-warning fs-6">{{ fila.total }}%</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-center">
+                                {% if fila.total %}
+                                    <form method="post" action="{% url 'horarios:mandar_desempeno_a_boleta' fila.alumno.id gm.id periodo.id %}" style="display:inline;">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-primary" onclick="return confirm('¿Estás seguro de enviar esta calificación a la boleta?')">
+                                            <i class="bi bi-send"></i> Mandar ({{ fila.calificacion_boleta }}%)
+                                        </button>
+                                    </form>
+                                {% else %}
+                                    <span class="text-muted">—</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+{% else %}
+    <div class="alert alert-info">
+        <i class="bi bi-info-circle"></i> No hay evidencias disponibles.
+    </div>
+{% endif %}
+
+{% for e in evidencias %}
+    <div class="modal fade" id="modalEvidencia{{ e.id }}" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="bi bi-clipboard-check"></i> {{ e.nombre }}
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <dl class="row">
+                        <dt class="col-sm-4">Tipo:</dt>
+                        <dd class="col-sm-8">{{ e.get_tipo_display }}</dd>
+                        <dt class="col-sm-4">Valor:</dt>
+                        <dd class="col-sm-8"><span class="badge bg-primary">{{ e.porcentaje }}%</span></dd>
+                        <dt class="col-sm-4">Fecha:</dt>
+                        <dd class="col-sm-8">{{ e.fecha|date:"d/m/Y" }}</dd>
+                        <dt class="col-sm-4">Grupo:</dt>
+                        <dd class="col-sm-8">{{ e.grupo_materia.grupo.nombre }}</dd>
+                        <dt class="col-sm-4">Materia:</dt>
+                        <dd class="col-sm-8">{{ e.grupo_materia.materia.nombre }}</dd>
+                        {% if e.descripcion %}
+                            <dt class="col-sm-4">Descripción:</dt>
+                            <dd class="col-sm-8">{{ e.descripcion|linebreaks }}</dd>
+                        {% endif %}
+                        {% if e.creada_por %}
+                            <dt class="col-sm-4">Creada por:</dt>
+                            <dd class="col-sm-8">{{ e.creada_por.username }}</dd>
+                        {% endif %}
+                        {% if e.fecha_creacion %}
+                            <dt class="col-sm-4">Creada el:</dt>
+                            <dd class="col-sm-8">{{ e.fecha_creacion|date:"d/m/Y H:i" }}</dd>
+                        {% endif %}
+                    </dl>
+                </div>
+                <div class="modal-footer">
+                    <a href="{% url 'horarios:capturar_desempeno' e.id %}" class="btn btn-success">
+                        <i class="bi bi-pencil-square"></i> Capturar calificaciones
+                    </a>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endfor %}
+{% endblock %}

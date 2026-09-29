@@ -1,0 +1,98 @@
+{% extends 'horarios/base.html' %}
+
+{% block title %}Bitácora de Incidencias{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-exclamation-triangle"></i> Bitácora de Incidencias</h2>
+    <a href="{% url 'horarios:incidencia_crear' %}" class="btn btn-primary"><i class="bi bi-plus-circle"></i> Nueva incidencia</a>
+</div>
+
+<form method="get">
+    <div class="row g-3">
+        <div class="col-md-3">
+            <label>Grupo</label>
+            <select name="grupo" class="form-select">
+                <option value="">Todos</option>
+                {% for g in grupos %}
+                    <option value="{{ g.id }}" {% if grupo_sel == g.id|stringformat:"s" %}selected{% endif %}>{{ g.nombre }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-3">
+            <label>Materia</label>
+            <select name="materia" class="form-select">
+                <option value="">Todas</option>
+                {% for m in materias %}
+                    <option value="{{ m.id }}" {% if materia_sel == m.id|stringformat:"s" %}selected{% endif %}>{{ m.nombre }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-3">
+            <label>Tipo</label>
+            <select name="tipo" class="form-select">
+                <option value="">Todos</option>
+                {% for t in tipos %}
+                    <option value="{{ t.0 }}" {% if tipo_sel == t.0 %}selected{% endif %}>{{ t.1 }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-2">
+            <label>Fecha inicio</label>
+            <input type="date" name="fecha_inicio" value="{{ fecha_inicio }}" class="form-control">
+        </div>
+        <div class="col-md-2">
+            <label>Fecha fin</label>
+            <input type="date" name="fecha_fin" value="{{ fecha_fin }}" class="form-control">
+        </div>
+        <div class="col-md-1 d-flex align-items-end">
+            <button type="submit" class="btn btn-primary">Filtrar</button>
+            <a href="{% url 'horarios:incidencias_lista' %}" class="btn btn-secondary ms-2">Limpiar</a>
+        </div>
+    </div>
+</form>
+
+{% if incidencias %}
+    <div class="card">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-bordered table-hover mb-0">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>Fecha</th>
+                            <th>Alumno</th>
+                            <th>Grupo</th>
+                            <th>Materia</th>
+                            <th>Tipo</th>
+                            <th>Resumen</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for i in incidencias %}
+                            <tr>
+                                <td>{{ i.fecha|date:"d/m/Y" }}</td>
+                                <td>{{ i.alumno.apellido_paterno }} {{ i.alumno.apellido_materno|default:'' }} {{ i.alumno.nombre }}</td>
+                                <td>{{ i.grupo_materia.grupo.nombre }}</td>
+                                <td>{{ i.grupo_materia.materia.nombre }}</td>
+                                <td><span class="badge bg-{{ i.color_badge }}">{{ i.get_tipo_reporte_display }}</span></td>
+                                <td>{{ i.resumen|truncatechars:80 }}</td>
+                                <td>
+                                    <a href="{% url 'horarios:incidencia_editar' i.id %}" class="btn btn-sm btn-outline-primary">Editar</a>
+                                    <a href="{% url 'horarios:incidencia_eliminar' i.id %}" class="btn btn-sm btn-outline-danger">Eliminar</a>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+{% else %}
+    <div class="alert alert-info">
+        No hay incidencias registradas.
+    </div>
+{% endif %}
+
+<a href="{% url 'horarios:dashboard' %}" class="btn btn-secondary mt-3">Volver al dashboard</a>
+{% endblock %}

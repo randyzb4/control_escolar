@@ -1,0 +1,60 @@
+{% extends 'horarios/base.html' %}
+
+{% block title %}{% if accion == 'crear' %}Nueva Sesión{% else %}Editar Sesión{% endif %}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>
+        {% if accion == 'crear' %}<i class="bi bi-plus-circle"></i> Nueva Sesión
+        {% else %}<i class="bi bi-pencil"></i> Editar Sesión {{ sesion.numero }}{% endif %}
+    </h2>
+    <a href="{% url 'horarios:planeacion_editar' plan.id %}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left"></i> Volver
+    </a>
+</div>
+
+<div class="alert alert-info">
+    <strong>Planeación:</strong> {{ plan.titulo }}
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <form method="post">
+            {% csrf_token %}
+            {% if accion == 'crear' %}
+                <div class="mb-3">
+                    <label class="form-label">Número de sesión</label>
+                    <input type="number" name="numero" class="form-control" value="{{ siguiente_num }}" required>
+                </div>
+            {% endif %}
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Fecha</label>
+                    <input type="date" name="fecha" class="form-control" required
+                           value="{% if sesion %}{{ sesion.fecha|date:'Y-m-d' }}{% else %}{{ hoy }}{% endif %}">
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Duración (minutos)</label>
+                    <input type="number" name="duracion_minutos" class="form-control"
+                           value="{{ sesion.duracion_minutos|default:50 }}" required>
+                </div>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Recursos y materiales a usar</label>
+                <textarea name="recursos" rows="4" class="form-control" required>{{ sesion.recursos|default:'' }}</textarea>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Producto o evidencia esperada</label>
+                <textarea name="producto" rows="3" class="form-control" required>{{ sesion.producto|default:'' }}</textarea>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Actividades (inicio, desarrollo, cierre) — opcional</label>
+                <textarea name="actividades" rows="5" class="form-control">{{ sesion.actividades|default:'' }}</textarea>
+            </div>
+            <button type="submit" class="btn btn-primary">
+                <i class="bi bi-save"></i> Guardar
+            </button>
+        </form>
+    </div>
+</div>
+{% endblock %}

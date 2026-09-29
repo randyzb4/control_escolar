@@ -1,0 +1,25 @@
+{% extends 'horarios/base.html' %}
+
+{% block title %}Eliminar Incidencia{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header bg-danger text-white">
+        <i class="bi bi-exclamation-triangle"></i> Confirmar eliminación
+    </div>
+    <div class="card-body">
+        <p>¿Estás seguro de que quieres eliminar esta incidencia?</p>
+        <ul>
+            <li>Fecha: {{ incidencia.fecha|date:"d/m/Y" }}</li>
+            <li>Alumno: {{ incidencia.alumno.apellido_paterno }} {{ incidencia.alumno.apellido_materno|default:'' }} {{ incidencia.alumno.nombre }}</li>
+            <li>Tipo: {{ incidencia.get_tipo_reporte_display }}</li>
+            <li>Resumen: {{ incidencia.resumen|truncatechars:100 }}</li>
+        </ul>
+        <form method="post">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-danger">Eliminar</button>
+            <a href="{% url 'horarios:incidencias_lista' %}" class="btn btn-secondary ms-2">Cancelar</a>
+        </form>
+    </div>
+</div>
+{% endblock %}

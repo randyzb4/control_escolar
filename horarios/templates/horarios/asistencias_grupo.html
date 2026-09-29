@@ -1,0 +1,137 @@
+{% extends 'horarios/base.html' %}
+
+{% block title %}Asistencias de {{ grupo.nombre }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2><i class="bi bi-clipboard-check"></i> Asistencias del grupo: {{ grupo.nombre }}</h2>
+        <p class="text-muted mb-0">
+            {% if materia_sel %} Materia: <strong>{{ materia_sel.nombre }}</strong>{% else %}Todas las materias{% endif %}
+        </p>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="{% url 'horarios:lista_alumnos_grupo' grupo.id %}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Volver</a> <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#modalListaAsistencia">
+    <i class="bi bi-file-pdf"></i> Lista imprimible
+</button>
+        <a href="{% url 'horarios:pdf_asistencias_grupo' grupo.id %}?materia={{ materia_sel.id|default:'' }}&fecha_inicio={{ fecha_inicio }}&fecha_fin={{ fecha_fin }}" class="btn btn-danger"><i class="bi bi-file-pdf"></i> PDF</a>
+        <button class="btn btn-outline-primary" onclick="window.print()"><i class="bi bi-printer"></i> Imprimir</button>
+    </div>
+</div>
+
+<form method="get">
+    <div class="row g-3">
+        <div class="col-md-4">
+            <label>Materia</label>
+            <select name="materia" class="form-select">
+                <option value="">Todas las materias</option>
+                {% for m in materias %}
+                    <option value="{{ m.id }}" {% if materia_sel and m.id == materia_sel.id %}selected{% endif %}>{{ m.nombre }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-3">
+            <label>Fecha inicio</label>
+            <input type="date" name="fecha_inicio" value="{{ fecha_inicio }}" class="form-control">
+        </div>
+        <div class="col-md-3">
+            <label>Fecha fin</label>
+            <input type="date" name="fecha_fin" value="{{ fecha_fin }}" class="form-control">
+        </div>
+        <div class="col-md-2 d-flex align-items-end">
+            <button type="submit" class="btn btn-primary">Filtrar</button>
+        </div>
+    </div>
+</form>
+
+{% if resumen %}
+    <div class="card">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-bordered table-hover mb-0">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>#</th>
+                            <th>Alumno</th>
+                            <th class="text-center">Presente</th>
+                            <th class="text-center">Ausente</th>
+                            <th class="text-center">Retardo</th>
+                            <th class="text-center">Justificado</th>
+                            <th class="text-center">Total</th>
+                            <th class="text-center">% Asistencia</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for fila in resumen %}
+                            <tr>
+                                <td>{{ forloop.counter }}</td>
+                                <td>{{ fila.alumno.apellido_paterno }} {{ fila.alumno.apellido_materno|default:'' }} {{ fila.alumno.nombre }}</td>
+                                <td class="text-center"><span class="badge bg-success">{{ fila.presente }}</span></td>
+                                <td class="text-center"><span class="badge bg-danger">{{ fila.ausente }}</span></td>
+                                <td class="text-center"><span class="badge bg-warning">{{ fila.retardo }}</span></td>
+                                <td class="text-center"><span class="badge bg-info">{{ fila.justificado }}</span></td>
+                                <td class="text-center">{{ fila.total }}</td>
+                                <td class="text-center">
+                                    {% if fila.porcentaje %}
+                                        {% if fila.porcentaje >= 80 %}<strong class="text-success">{{ fila.porcentaje|floatformat:1 }}%</strong>
+                                        {% elif fila.porcentaje >= 60 %}<strong class="text-warning">{{ fila.porcentaje|floatformat:1 }}%</strong>
+                                        {% else %}<strong class="text-danger">{{ fila.porcentaje|floatformat:1 }}%</strong>
+                                        {% endif %}
+                                    {% else %}<span class="text-muted">—</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+{% else %}
+    <div class="alert alert-info">
+        No hay asistencias registradas con esos filtros.
+    </div>
+{% endif %}
+
+<div class="modal fade" id="modalListaAsistencia" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Imprimir lista de asistencia</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Selecciona el mes y año:</p>
+                <form method="get" action="{% url 'horarios:pdf_lista_asistencia' grupo.id %}" target="_blank">
+                    <div class="row g-3">
+                        <div class="col-6">
+                            <label class="form-label">Mes</label>
+                            <select name="mes" class="form-select">
+                                <option value="1">Enero</option>
+                                <option value="2">Febrero</option>
+                                <option value="3">Marzo</option>
+                                <option value="4">Abril</option>
+                                <option value="5">Mayo</option>
+                                <option value="6">Junio</option>
+                                <option value="7">Julio</option>
+                                <option value="8">Agosto</option>
+                                <option value="9">Septiembre</option>
+                                <option value="10">Octubre</option>
+                                <option value="11">Noviembre</option>
+                                <option value="12">Diciembre</option>
+                            </select>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label">Año</label>
+                            <input type="number" name="anio" class="form-control" value="2026" min="2020" max="2100">
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-danger mt-3 w-100">
+                        <i class="bi bi-file-pdf"></i> Generar PDF
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

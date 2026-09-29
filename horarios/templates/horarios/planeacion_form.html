@@ -1,0 +1,137 @@
+{% extends 'horarios/base.html' %}
+
+{% block title %}{% if accion == 'crear' %}Nueva Planeación{% else %}Editar Planeación{% endif %}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>
+        {% if accion == 'crear' %}<i class="bi bi-plus-circle"></i> Nueva Planeación
+        {% else %}<i class="bi bi-pencil"></i> Editar Planeación{% endif %}
+    </h2>
+    <a href="{% url 'horarios:planeaciones_lista' %}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left"></i> Volver
+    </a>
+</div>
+
+<div class="card mb-4">
+    <div class="card-header"><i class="bi bi-info-circle"></i> Datos generales</div>
+    <div class="card-body">
+        <form method="post">
+            {% csrf_token %}
+            {% if accion == 'crear' %}
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Grupo y Materia</label>
+                        <select name="grupo_materia" class="form-select" required>
+                            <option value="">Selecciona...</option>
+                            {% for gm in gms %}
+                                <option value="{{ gm.id }}">{{ gm.grupo.nombre }} - {{ gm.materia.nombre }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Periodo</label>
+                        <select name="periodo" class="form-select" required>
+                            <option value="">Selecciona...</option>
+                            {% for p in periodos %}
+                                <option value="{{ p.id }}">{{ p.nombre }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+            {% else %}
+                <div class="row mb-3">
+                    <div class="col-md-6"><strong>Grupo:</strong> {{ plan.grupo_materia.grupo.nombre }}</div>
+                    <div class="col-md-6"><strong>Materia:</strong> {{ plan.grupo_materia.materia.nombre }}</div>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-md-6"><strong>Periodo:</strong> {{ plan.periodo.nombre }}</div>
+                    <div class="col-md-6"><strong>Profesor:</strong> {{ plan.profesor.nombre }}</div>
+                </div>
+            {% endif %}
+
+            <div class="mb-3">
+                <label class="form-label">Título de la planeación</label>
+                <input type="text" name="titulo" class="form-control" required value="{{ plan.titulo|default:'' }}">
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Tema</label>
+                <input type="text" name="tema" class="form-control" required value="{{ plan.tema|default:'' }}">
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Objetivo general</label>
+                <textarea name="objetivo" rows="4" class="form-control" required>{{ plan.objetivo|default:'' }}</textarea>
+            </div>
+            <div class="row">
+                <div class="col-md-4 mb-3">
+                    <label class="form-label">Fecha inicio</label>
+                    <input type="date" name="fecha_inicio" class="form-control" required value="{% if plan %}{{ plan.fecha_inicio|date:'Y-m-d' }}{% else %}{{ hoy }}{% endif %}">
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label class="form-label">Fecha fin</label>
+                    <input type="date" name="fecha_fin" class="form-control" required value="{% if plan %}{{ plan.fecha_fin|date:'Y-m-d' }}{% else %}{{ hoy }}{% endif %}">
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label class="form-label">Estado</label>
+                    <select name="estado" class="form-select">
+                        {% for e in estados %}
+                            <option value="{{ e.0 }}" {% if plan and plan.estado == e.0 %}selected{% endif %}>{{ e.1 }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Observaciones (opcional)</label>
+                <textarea name="observaciones" rows="3" class="form-control">{{ plan.observaciones|default:'' }}</textarea>
+            </div>
+            <button type="submit" class="btn btn-primary">
+                <i class="bi bi-save"></i> Guardar
+            </button>
+        </form>
+    </div>
+</div>
+
+{% if accion == 'editar' %}
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-list-ol"></i> Sesiones ({{ sesiones|length }})</span>
+        <a href="{% url 'horarios:sesion_crear' plan.id %}" class="btn btn-sm btn-success">
+            <i class="bi bi-plus-circle"></i> Nueva sesión
+        </a>
+    </div>
+    <div class="card-body p-0">
+        {% if sesiones %}
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>#</th>
+                        <th>Fecha</th>
+                        <th>Duración</th>
+                        <th>Recursos</th>
+                        <th>Producto</th>
+                        <th class="text-center">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for s in sesiones %}
+                        <tr>
+                            <td><strong>{{ s.numero }}</strong></td>
+                            <td>{{ s.fecha|date:"d/m/Y" }}</td>
+                            <td>{{ s.duracion_minutos }} min</td>
+                            <td>{{ s.recursos|truncatechars:60 }}</td>
+                            <td>{{ s.producto|truncatechars:60 }}</td>
+                            <td class="text-center">
+                                <a href="{% url 'horarios:sesion_editar' s.id %}" class="btn btn-sm btn-outline-warning"><i class="bi bi-pencil"></i></a>
+                                <a href="{% url 'horarios:sesion_eliminar' s.id %}" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></a>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <p class="text-muted text-center p-3">No hay sesiones. Agrega la primera.</p>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+{% endblock %}
