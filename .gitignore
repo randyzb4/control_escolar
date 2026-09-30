@@ -46,7 +46,10 @@ db_data_simple.json
 # Archivos estáticos y media
 # ============================================================
 staticfiles/
-media/
+# Media (ignorar todo excepto el logo institucional)
+media/*
+!media/institucion/
+!media/institucion/**
 /static/
 
 # ============================================================
