@@ -1269,11 +1269,6 @@ def lista_alumnos_grupo(request, grupo_id):
 
 @login_required
 def materias_por_grupo(request):
-    """
-    API que devuelve las materias de un grupo.
-    - Profesor: solo las materias que imparte.
-    - Coordinador: todas las materias del grupo.
-    """
     grupo_id = request.GET.get('grupo')
 
     if not grupo_id:
@@ -1289,14 +1284,12 @@ def materias_por_grupo(request):
         return JsonResponse({'materias': []})
 
     if es_profesor and not es_coordinador:
-        # Solo las materias que imparte el profesor
         profesor = request.user.perfil.profesor
         materias = Materia.objects.filter(
             grupomateria__grupo_id=grupo_id,
             grupomateria__profesor=profesor
         ).distinct().order_by('nombre')
     else:
-        # Coordinador: todas las materias del grupo
         materias = Materia.objects.filter(
             grupomateria__grupo_id=grupo_id
         ).distinct().order_by('nombre')
@@ -2042,15 +2035,23 @@ def desempeno_grupo(request, grupo_id):
             messages.error(request, 'No impartes clases en este grupo.')
             return redirect('horarios:desempeno_seleccionar')
 
-    gm_id = request.GET.get('materia')
+    materia_id = request.GET.get('materia')
     periodo_id = request.GET.get('periodo')
 
     gm = None
-    if gm_id:
-        try:
-            gm = GrupoMateria.objects.get(pk=gm_id, grupo=grupo)
-        except GrupoMateria.DoesNotExist:
-            gm = None
+    if materia_id:
+        if es_profesor and not es_coordinador:
+            profesor = request.user.perfil.profesor
+            gm = GrupoMateria.objects.filter(
+                grupo=grupo,
+                materia_id=materia_id,
+                profesor=profesor
+            ).first()
+        else:
+            gm = GrupoMateria.objects.filter(
+                grupo=grupo,
+                materia_id=materia_id
+            ).first()
 
     periodo = None
     if periodo_id:
@@ -2073,13 +2074,17 @@ def desempeno_grupo(request, grupo_id):
         messages.warning(request, 'No hay materia o periodo disponibles.')
         return redirect('horarios:desempeno_seleccionar')
 
+    # Materias para el selector
     if es_profesor and not es_coordinador:
         profesor = request.user.perfil.profesor
-        gms = GrupoMateria.objects.filter(
-            grupo=grupo, profesor=profesor
-        ).select_related('materia')
+        materias = Materia.objects.filter(
+            grupomateria__grupo=grupo,
+            grupomateria__profesor=profesor
+        ).distinct().order_by('nombre')
     else:
-        gms = GrupoMateria.objects.filter(grupo=grupo).select_related('materia')
+        materias = Materia.objects.filter(
+            grupomateria__grupo=grupo
+        ).distinct().order_by('nombre')
 
     periodos = Periodo.objects.filter(activo=True).order_by('-fecha_inicio')
 
@@ -2091,7 +2096,14 @@ def desempeno_grupo(request, grupo_id):
 
     alumnos = Alumno.objects.filter(
         grupo=grupo, activo=True
-    ).order_by('apellido_paterno', 'apellido_materno', 'nombre')
+    )
+    if gm.subgrupo:
+        alumnos = alumnos.filter(subgrupo=gm.subgrupo)
+    alumnos = alumnos.order_by('apellido_paterno', 'apellido_materno', 'nombre')
+
+    # Filtrar alumnos por subgrupo del GrupoMateria
+    if gm.subgrupo:
+        alumnos = alumnos.filter(subgrupo=gm.subgrupo)
 
     calificaciones = {}
     for c in CalificacionEvidencia.objects.filter(
@@ -2129,7 +2141,8 @@ def desempeno_grupo(request, grupo_id):
     return render(request, 'horarios/desempeno_grupo.html', {
         'grupo': grupo,
         'gm': gm,
-        'gms': gms,
+        'gms': GrupoMateria.objects.filter(grupo=grupo).select_related('materia') if es_coordinador else GrupoMateria.objects.filter(grupo=grupo, profesor=request.user.perfil.profesor).select_related('materia'),
+        'materias': materias,
         'periodo': periodo,
         'periodos': periodos,
         'evidencias': evidencias,

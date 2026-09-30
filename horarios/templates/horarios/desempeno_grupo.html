@@ -9,10 +9,10 @@
         <a class="btn btn-outline-secondary" href="{% url 'horarios:desempeno_seleccionar' %}">
             <i class="bi bi-arrow-left"></i> Volver
         </a>
-        <a class="btn btn-warning" href="{% url 'horarios:desempeno_pendientes' grupo.id %}?materia={{ gm.id }}&periodo={{ periodo.id }}">
+        <a class="btn btn-warning" href="{% url 'horarios:desempeno_pendientes' grupo.id %}?materia={{ gm.materia.id }}&periodo={{ periodo.id }}">
             <i class="bi bi-exclamation-circle"></i> Pendientes
         </a>
-        <a class="btn btn-primary" href="{% url 'horarios:evidencia_crear' grupo.id %}?materia={{ gm.id }}&periodo={{ periodo.id }}">
+        <a class="btn btn-primary" href="{% url 'horarios:evidencia_crear' grupo.id %}?materia={{ gm.materia.id }}&periodo={{ periodo.id }}">
             <i class="bi bi-plus-circle"></i> Nueva evidencia
         </a>
     </div>
