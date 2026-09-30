@@ -871,6 +871,29 @@ def boleta_alumno(request, alumno_id):
         tipo='periodo', padre_id__in=trimestres_ids
     ).order_by('fecha_inicio')
 
+        # Serializables para json_script
+    periodos_json = [
+        {
+            'id': p.id,
+            'nombre': p.nombre,
+            'tipo': p.tipo,
+            'fecha_inicio': p.fecha_inicio.isoformat() if p.fecha_inicio else None,
+            'fecha_fin': p.fecha_fin.isoformat() if p.fecha_fin else None,
+        }
+        for p in periodos
+    ]
+
+    trimestres_json = [
+        {
+            'id': t.id,
+            'nombre': t.nombre,
+            'tipo': t.tipo,
+            'fecha_inicio': t.fecha_inicio.isoformat() if t.fecha_inicio else None,
+            'fecha_fin': t.fecha_fin.isoformat() if t.fecha_fin else None,
+        }
+        for t in trimestres
+    ]
+
     # Obtener todas las materias del grupo del alumno
     materias_raw = Materia.objects.filter(
         grupomateria__grupo=alumno.grupo
@@ -1011,6 +1034,8 @@ def boleta_alumno(request, alumno_id):
         'anio_escolar': anio_escolar,
         'trimestres': trimestres,
         'periodos': periodos,
+        'trimestres_json': trimestres_json,   # ← NUEVO
+        'periodos_json': periodos_json,       # ← NUEVO
         'tipo_sel': tipo_sel,
         'id_sel': id_sel,
         'columnas': columnas,
@@ -1057,6 +1082,29 @@ def pdf_boleta_alumno(request, alumno_id):
     periodos = Periodo.objects.filter(
         tipo='periodo', padre_id__in=trimestres_ids
     ).order_by('fecha_inicio')
+
+    # Serializables para json_script
+    periodos_json = [
+       {
+         'id': p.id,
+         'nombre': p.nombre,
+         'tipo': p.tipo,
+         'fecha_inicio': p.fecha_inicio.isoformat() if p.fecha_inicio else None,
+         'fecha_fin': p.fecha_fin.isoformat() if p.fecha_fin else None,
+       }
+       for p in periodos
+]
+
+    trimestres_json = [
+        {
+        'id': t.id,
+        'nombre': t.nombre,
+        'tipo': t.tipo,
+        'fecha_inicio': t.fecha_inicio.isoformat() if t.fecha_inicio else None,
+        'fecha_fin': t.fecha_fin.isoformat() if t.fecha_fin else None,
+         }
+       for t in trimestres
+]
 
     # Agrupar materias paralelas
     materias_raw = Materia.objects.filter(

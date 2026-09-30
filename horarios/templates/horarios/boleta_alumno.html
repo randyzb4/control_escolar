@@ -246,8 +246,8 @@
 {% endblock %}
 
 {% block extra_js %}
-{{ periodos|json_script:"data-periodos" }}
-{{ trimestres|json_script:"data-trimestres" }}
+{{ periodos_json|json_script:"data-periodos" }}
+{{ trimestres_json|json_script:"data-trimestres" }}
 <script>
 (function() {
     const rawPeriodos = document.getElementById('data-periodos');
