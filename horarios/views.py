@@ -63,12 +63,11 @@ def _construir_grilla(asignaciones):
     for hora_inicio, hora_fin in horas:
         celdas = []
         for dia in dias:
-            asig = None
+            asignaciones_celda = []
             for a in asignaciones:
                 if a.slot.hora_inicio == hora_inicio and a.slot.dia == dia:
-                    asig = a
-                    break
-            celdas.append(asig)
+                    asignaciones_celda.append(a)
+            celdas.append(asignaciones_celda)
         filas.append({
             'hora_inicio': hora_inicio,
             'hora_fin': hora_fin,
@@ -480,12 +479,14 @@ def capturar_calificaciones(request):
 
     profesor = request.user.perfil.profesor
     grupos = Grupo.objects.filter(grupomateria__profesor=profesor).distinct().order_by('nombre')
-    periodos = Periodo.objects.filter(activo=True).order_by('-fecha_inicio')
+    periodos = Periodo.objects.filter(activo=True, tipo='periodo').order_by('-fecha_inicio')
 
+    # Leer parámetros de GET o POST
     grupo_id = request.POST.get('grupo') or request.GET.get('grupo')
     materia_id = request.POST.get('materia') or request.GET.get('materia')
     periodo_id = request.POST.get('periodo') or request.GET.get('periodo')
 
+    # Calcular materias SIEMPRE que haya grupo seleccionado
     materias = []
     if grupo_id:
         materias = Materia.objects.filter(
@@ -493,6 +494,7 @@ def capturar_calificaciones(request):
             grupomateria__profesor=profesor
         ).distinct().order_by('nombre')
 
+    # --- POST: guardar calificaciones ---
     if request.method == 'POST':
         if not grupo_id or not materia_id or not periodo_id:
             messages.error(request, 'Debes seleccionar grupo, materia y periodo.')
@@ -503,7 +505,12 @@ def capturar_calificaciones(request):
         )
         periodo = Periodo.objects.get(id=periodo_id)
 
-        for alumno in Alumno.objects.filter(grupo=gm.grupo, activo=True):
+        # Filtrar alumnos por subgrupo del GrupoMateria
+        alumnos_qs = Alumno.objects.filter(grupo=gm.grupo, activo=True)
+        if gm.subgrupo:
+            alumnos_qs = alumnos_qs.filter(subgrupo=gm.subgrupo)
+
+        for alumno in alumnos_qs:
             valor = request.POST.get(f'calif_{alumno.id}')
             if valor:
                 try:
@@ -523,6 +530,7 @@ def capturar_calificaciones(request):
             f"?grupo={grupo_id}&materia={materia_id}&periodo={periodo_id}"
         )
 
+    # --- GET: mostrar alumnos y calificaciones ---
     alumnos_con_calif = []
 
     if grupo_id and materia_id and periodo_id:
@@ -531,9 +539,13 @@ def capturar_calificaciones(request):
         )
         periodo = Periodo.objects.get(id=periodo_id)
 
+        # Filtrar alumnos por subgrupo del GrupoMateria
         alumnos = Alumno.objects.filter(
             grupo=gm.grupo, activo=True
-        ).order_by('apellido_paterno', 'apellido_materno', 'nombre')
+        )
+        if gm.subgrupo:
+            alumnos = alumnos.filter(subgrupo=gm.subgrupo)
+        alumnos = alumnos.order_by('apellido_paterno', 'apellido_materno', 'nombre')
 
         calificaciones = Calificacion.objects.filter(
             grupo_materia=gm, periodo=periodo
@@ -564,10 +576,12 @@ def pase_lista(request):
         grupomateria__profesor=profesor
     ).distinct().order_by('nombre')
 
+    # Leer parámetros de GET o POST
     grupo_id = request.POST.get('grupo') or request.GET.get('grupo')
     materia_id = request.POST.get('materia') or request.GET.get('materia')
     fecha_str = request.POST.get('fecha') or request.GET.get('fecha')
 
+    # Calcular materias SIEMPRE que haya grupo seleccionado
     materias = []
     if grupo_id:
         materias = Materia.objects.filter(
@@ -575,6 +589,7 @@ def pase_lista(request):
             grupomateria__profesor=profesor
         ).distinct().order_by('nombre')
 
+    # --- POST: guardar asistencia ---
     if request.method == 'POST':
         if not grupo_id or not materia_id or not fecha_str:
             messages.error(request, 'Debes seleccionar grupo, materia y fecha.')
@@ -590,7 +605,12 @@ def pase_lista(request):
             grupo_id=grupo_id, materia_id=materia_id, profesor=profesor
         )
 
-        for alumno in Alumno.objects.filter(grupo=gm.grupo, activo=True):
+        # Filtrar alumnos por subgrupo del GrupoMateria
+        alumnos_qs = Alumno.objects.filter(grupo=gm.grupo, activo=True)
+        if gm.subgrupo:
+            alumnos_qs = alumnos_qs.filter(subgrupo=gm.subgrupo)
+
+        for alumno in alumnos_qs:
             estado = request.POST.get(f'estado_{alumno.id}', 'presente')
             obs = request.POST.get(f'obs_{alumno.id}', '')
             Asistencia.objects.update_or_create(
@@ -610,6 +630,7 @@ def pase_lista(request):
             f"?grupo={grupo_id}&materia={materia_id}&fecha={fecha_str}"
         )
 
+    # --- GET: mostrar alumnos ---
     alumnos_con_asist = []
 
     if grupo_id and materia_id and fecha_str:
@@ -622,9 +643,13 @@ def pase_lista(request):
             gm = GrupoMateria.objects.get(
                 grupo_id=grupo_id, materia_id=materia_id, profesor=profesor
             )
+            # Filtrar alumnos por subgrupo del GrupoMateria
             alumnos = Alumno.objects.filter(
                 grupo=gm.grupo, activo=True
-            ).order_by('apellido_paterno', 'apellido_materno', 'nombre')
+            )
+            if gm.subgrupo:
+                alumnos = alumnos.filter(subgrupo=gm.subgrupo)
+            alumnos = alumnos.order_by('apellido_paterno', 'apellido_materno', 'nombre')
 
             asistencias = Asistencia.objects.filter(
                 grupo_materia=gm, fecha=fecha
@@ -699,6 +724,10 @@ def cargar_alumnos(request):
                 matricula = str(datos.get('matricula', '')).strip()
                 grupo_nombre = str(datos.get('grupo', '')).strip()
                 email = str(datos.get('email', '')).strip() if datos.get('email') else ''
+                subgrupo = str(datos.get('subgrupo', '')).strip() if datos.get('subgrupo') else ''
+
+                if subgrupo not in ('1', '2', ''):
+                    subgrupo = ''
 
                 if not matricula or not grupo_nombre:
                     errores.append(f'Fila {idx}: faltan matrícula o grupo.')
@@ -721,25 +750,17 @@ def cargar_alumnos(request):
 
                     tokens = nombre_completo.split()
                     if len(tokens) == 1:
-                     nombre = tokens[0]
-                     apellido_paterno = ''
-                     apellido_materno = ''
+                        nombre = tokens[0]
+                        apellido_paterno = ''
+                        apellido_materno = ''
                     elif len(tokens) == 2:
-                     # 2 tokens: ApellidoPaterno Nombre
-                     apellido_paterno = tokens[0]
-                     apellido_materno = ''
-                     nombre = tokens[1]
-                    elif len(tokens) == 3:
-                    # 3 tokens: ApellidoPaterno ApellidoMaterno Nombre
-                     apellido_paterno = tokens[0]
-                     apellido_materno = tokens[1]
-                     nombre = tokens[2]
+                        nombre = tokens[0]
+                        apellido_paterno = tokens[1]
+                        apellido_materno = ''
                     else:
-                    # 4+ tokens: ApellidoPaterno ApellidoMaterno Nombre(s)
-                      apellido_paterno = tokens[0]
-                      apellido_materno = tokens[1]
-                      nombre = ' '.join(tokens[2:])
-
+                        nombre = ' '.join(tokens[:-2])
+                        apellido_paterno = tokens[-2]
+                        apellido_materno = tokens[-1]
 
                 alumno, created = Alumno.objects.update_or_create(
                     matricula=matricula,
@@ -749,6 +770,7 @@ def cargar_alumnos(request):
                         'apellido_materno': apellido_materno,
                         'email': email,
                         'grupo': grupo,
+                        'subgrupo': subgrupo,
                         'activo': True,
                     }
                 )
@@ -779,16 +801,32 @@ def cargar_alumnos(request):
 def descargar_plantilla_alumnos(request):
     wb = Workbook()
 
+    # Hoja 1 - Formato A
     hoja_a = wb.active
     hoja_a.title = 'Formato A (separado)'
-    hoja_a.append(['matricula', 'nombre', 'apellido_paterno', 'apellido_materno', 'grupo', 'email'])
-    hoja_a.append(['2026001', 'Juan', 'Pérez', 'López', '1º A', 'juan@ejemplo.com'])
-    hoja_a.append(['2026002', 'María', 'García', 'Ruiz', '1º A', 'maria@ejemplo.com'])
+    hoja_a.append(['matricula', 'nombre', 'apellido_paterno', 'apellido_materno', 'grupo', 'subgrupo', 'email'])
+    hoja_a.append(['2026001', 'Juan', 'Pérez', 'López', '1° A', '1', 'juan@ejemplo.com'])
+    hoja_a.append(['2026002', 'María', 'García', 'Ruiz', '1° A', '2', 'maria@ejemplo.com'])
 
+    # Hoja 2 - Formato B
     hoja_b = wb.create_sheet('Formato B (junto)')
-    hoja_b.append(['matricula', 'nombre_completo', 'grupo', 'email'])
-    hoja_b.append(['2026001', 'Juan Pérez López', '1º A', 'juan@ejemplo.com'])
-    hoja_b.append(['2026002', 'María García Ruiz', '1º A', 'maria@ejemplo.com'])
+    hoja_b.append(['matricula', 'nombre_completo', 'grupo', 'subgrupo', 'email'])
+    hoja_b.append(['2026001', 'Juan Pérez López', '1° A', '1', 'juan@ejemplo.com'])
+    hoja_b.append(['2026002', 'María García Ruiz', '1° A', '2', 'maria@ejemplo.com'])
+
+    # Hoja 3 - Instrucciones
+    hoja_c = wb.create_sheet('Instrucciones')
+    hoja_c.append(['Instrucciones para la carga de alumnos'])
+    hoja_c.append([])
+    hoja_c.append(['1. La columna subgrupo es opcional.'])
+    hoja_c.append(['2. Valores permitidos en subgrupo: 1, 2, o dejar vacío.'])
+    hoja_c.append(['3. El subgrupo se usa para materias paralelas (ej: Inglés Nivel 1 vs Nivel 2).'])
+    hoja_c.append(['4. Los alumnos del subgrupo 1 van con el profesor de la materia paralela que corresponda.'])
+    hoja_c.append(['5. Puedes mezclar alumnos de distintos grupos en el mismo archivo.'])
+    hoja_c.append([])
+    hoja_c.append(['Columnas por hoja:'])
+    hoja_c.append(['  Formato A: matricula, nombre, apellido_paterno, apellido_materno, grupo, subgrupo, email'])
+    hoja_c.append(['  Formato B: matricula, nombre_completo, grupo, subgrupo, email'])
 
     response = HttpResponse(
         content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
@@ -800,7 +838,7 @@ def descargar_plantilla_alumnos(request):
 
 @login_required
 def boleta_alumno(request, alumno_id):
-    """Muestra la boleta de un alumno con filtro por periodo/trimestre/final."""
+    """Muestra la boleta de un alumno con filtro y fusión de materias paralelas."""
     alumno = get_object_or_404(Alumno, pk=alumno_id)
 
     es_coordinador = (
@@ -829,20 +867,35 @@ def boleta_alumno(request, alumno_id):
 
     trimestres = anio_escolar.hijos.filter(tipo='trimestre').order_by('fecha_inicio')
     trimestres_ids = list(trimestres.values_list('id', flat=True))
-    periodos = Periodo.objects.filter(tipo='periodo', padre_id__in=trimestres_ids).order_by('fecha_inicio')
+    periodos = Periodo.objects.filter(
+        tipo='periodo', padre_id__in=trimestres_ids
+    ).order_by('fecha_inicio')
 
-    # Convertir a listas de dicts para json_script
-    periodos_json = list(periodos.values('id', 'nombre'))
-    trimestres_json = list(trimestres.values('id', 'nombre'))
-
-    materias = Materia.objects.filter(
+    # Obtener todas las materias del grupo del alumno
+    materias_raw = Materia.objects.filter(
         grupomateria__grupo=alumno.grupo
     ).distinct().order_by('nombre')
+
+    # Agrupar por nombre_boleta (fusiona materias paralelas)
+    grupos_por_nombre = {}
+    for m in materias_raw:
+        nombre = m.nombre_boleta()
+        if nombre not in grupos_por_nombre:
+            grupos_por_nombre[nombre] = []
+        grupos_por_nombre[nombre].append(m)
+
+    # Construir lista de materias únicas para el template
+    materias_unicas = []
+    for nombre_boleta, grupo_materias in sorted(grupos_por_nombre.items()):
+        materias_unicas.append({
+            'nombre': nombre_boleta,
+            'materia_ids': [m.id for m in grupo_materias],
+        })
 
     tipo_sel = request.GET.get('tipo', '')
     id_sel = request.GET.get('id', '')
 
-    # Inicializar variables (IMPORTANTE)
+    # Inicializar variables
     columnas = []
     filas = []
     promedios_extra = []
@@ -854,19 +907,18 @@ def boleta_alumno(request, alumno_id):
         periodo_sel = Periodo.objects.filter(pk=id_sel).first()
         if periodo_sel:
             columnas = [periodo_sel]
-            for m in materias:
+            for mat in materias_unicas:
                 calif = Calificacion.objects.filter(
                     alumno=alumno,
-                    grupo_materia__materia=m,
+                    grupo_materia__materia_id__in=mat['materia_ids'],
                     periodo=periodo_sel,
                     calificacion__isnull=False
                 ).first()
                 valor = _redondear_calificacion(calif.calificacion) if calif else None
                 filas.append({
-                    'materia': m,
+                    'materia': mat['nombre'],
                     'calificacion': valor,
                 })
-            # NO calcular promedio_general en modo periodo
         else:
             messages.error(request, 'Periodo no encontrado.')
             return redirect('horarios:boleta_alumno', alumno_id=alumno.id)
@@ -875,14 +927,14 @@ def boleta_alumno(request, alumno_id):
         trimestre_sel = Periodo.objects.filter(pk=id_sel).first()
         if trimestre_sel:
             columnas = list(trimestre_sel.hijos.filter(tipo='periodo').order_by('fecha_inicio'))
-            for m in materias:
+            for mat in materias_unicas:
                 califs_periodo = []
                 suma_materia = 0
                 cuenta_materia = 0
                 for p in columnas:
                     calif = Calificacion.objects.filter(
                         alumno=alumno,
-                        grupo_materia__materia=m,
+                        grupo_materia__materia_id__in=mat['materia_ids'],
                         periodo=p,
                         calificacion__isnull=False
                     ).first()
@@ -894,7 +946,7 @@ def boleta_alumno(request, alumno_id):
 
                 promedio_materia = _redondear_calificacion(suma_materia / cuenta_materia) if cuenta_materia > 0 else None
                 filas.append({
-                    'materia': m,
+                    'materia': mat['nombre'],
                     'calificaciones': califs_periodo,
                     'promedio': promedio_materia,
                 })
@@ -913,13 +965,13 @@ def boleta_alumno(request, alumno_id):
             return redirect('horarios:boleta_alumno', alumno_id=alumno.id)
 
     elif tipo_sel == 'final':
-        for m in materias:
+        for mat in materias_unicas:
             trimestres_promedios = []
             for t in trimestres:
                 periodos_eval = t.hijos.filter(tipo='periodo').order_by('fecha_inicio')
                 califs = Calificacion.objects.filter(
                     alumno=alumno,
-                    grupo_materia__materia=m,
+                    grupo_materia__materia_id__in=mat['materia_ids'],
                     periodo__in=periodos_eval,
                     calificacion__isnull=False
                 )
@@ -935,7 +987,7 @@ def boleta_alumno(request, alumno_id):
             promedio_final = _redondear_calificacion(sum(valores_validos) / len(valores_validos)) if valores_validos else None
 
             filas.append({
-                'materia': m,
+                'materia': mat['nombre'],
                 'trimestres': trimestres_promedios,
                 'promedio_final': promedio_final,
             })
@@ -957,8 +1009,8 @@ def boleta_alumno(request, alumno_id):
     return render(request, 'horarios/boleta_alumno.html', {
         'alumno': alumno,
         'anio_escolar': anio_escolar,
-        'trimestres': trimestres_json,
-        'periodos': periodos_json,
+        'trimestres': trimestres,
+        'periodos': periodos,
         'tipo_sel': tipo_sel,
         'id_sel': id_sel,
         'columnas': columnas,
@@ -971,10 +1023,9 @@ def boleta_alumno(request, alumno_id):
     })
 
 
-
 @login_required
 def pdf_boleta_alumno(request, alumno_id):
-    """Genera PDF de la boleta de un alumno con filtro."""
+    """Genera PDF de la boleta de un alumno con filtro y fusión de materias paralelas."""
     alumno = get_object_or_404(Alumno, pk=alumno_id)
 
     es_coordinador = (
@@ -1003,20 +1054,32 @@ def pdf_boleta_alumno(request, alumno_id):
 
     trimestres = anio_escolar.hijos.filter(tipo='trimestre').order_by('fecha_inicio')
     trimestres_ids = list(trimestres.values_list('id', flat=True))
-    periodos = Periodo.objects.filter(tipo='periodo', padre_id__in=trimestres_ids).order_by('fecha_inicio')
+    periodos = Periodo.objects.filter(
+        tipo='periodo', padre_id__in=trimestres_ids
+    ).order_by('fecha_inicio')
 
-    # Convertir a listas de dicts para json_script
-    periodos_json = list(periodos.values('id', 'nombre'))
-    trimestres_json = list(trimestres.values('id', 'nombre'))
-
-    materias = Materia.objects.filter(
+    # Agrupar materias paralelas
+    materias_raw = Materia.objects.filter(
         grupomateria__grupo=alumno.grupo
     ).distinct().order_by('nombre')
+
+    grupos_por_nombre = {}
+    for m in materias_raw:
+        nombre = m.nombre_boleta()
+        if nombre not in grupos_por_nombre:
+            grupos_por_nombre[nombre] = []
+        grupos_por_nombre[nombre].append(m)
+
+    materias_unicas = []
+    for nombre_boleta, grupo_materias in sorted(grupos_por_nombre.items()):
+        materias_unicas.append({
+            'nombre': nombre_boleta,
+            'materia_ids': [m.id for m in grupo_materias],
+        })
 
     tipo_sel = request.GET.get('tipo', '')
     id_sel = request.GET.get('id', '')
 
-    # Inicializar variables (IMPORTANTE)
     columnas = []
     filas = []
     promedios_extra = []
@@ -1028,16 +1091,16 @@ def pdf_boleta_alumno(request, alumno_id):
         periodo_sel = Periodo.objects.filter(pk=id_sel).first()
         if periodo_sel:
             columnas = [periodo_sel]
-            for m in materias:
+            for mat in materias_unicas:
                 calif = Calificacion.objects.filter(
                     alumno=alumno,
-                    grupo_materia__materia=m,
+                    grupo_materia__materia_id__in=mat['materia_ids'],
                     periodo=periodo_sel,
                     calificacion__isnull=False
                 ).first()
                 valor = _redondear_calificacion(calif.calificacion) if calif else None
                 filas.append({
-                    'materia': m,
+                    'materia': mat['nombre'],
                     'calificacion': valor,
                 })
 
@@ -1045,14 +1108,14 @@ def pdf_boleta_alumno(request, alumno_id):
         trimestre_sel = Periodo.objects.filter(pk=id_sel).first()
         if trimestre_sel:
             columnas = list(trimestre_sel.hijos.filter(tipo='periodo').order_by('fecha_inicio'))
-            for m in materias:
+            for mat in materias_unicas:
                 califs_periodo = []
                 suma_materia = 0
                 cuenta_materia = 0
                 for p in columnas:
                     calif = Calificacion.objects.filter(
                         alumno=alumno,
-                        grupo_materia__materia=m,
+                        grupo_materia__materia_id__in=mat['materia_ids'],
                         periodo=p,
                         calificacion__isnull=False
                     ).first()
@@ -1064,29 +1127,27 @@ def pdf_boleta_alumno(request, alumno_id):
 
                 promedio_materia = _redondear_calificacion(suma_materia / cuenta_materia) if cuenta_materia > 0 else None
                 filas.append({
-                    'materia': m,
+                    'materia': mat['nombre'],
                     'calificaciones': califs_periodo,
                     'promedio': promedio_materia,
                 })
 
-            # Promedio por periodo
             promedios_extra = []
             for i in range(len(columnas)):
                 valores = [f['calificaciones'][i] for f in filas if f['calificaciones'][i] is not None]
                 promedios_extra.append(_redondear_calificacion(sum(valores) / len(valores)) if valores else None)
 
-            # Promedio general del trimestre
             valores_prom = [f['promedio'] for f in filas if f['promedio'] is not None]
             promedio_general = _redondear_calificacion(sum(valores_prom) / len(valores_prom)) if valores_prom else None
 
     elif tipo_sel == 'final':
-        for m in materias:
+        for mat in materias_unicas:
             trimestres_promedios = []
             for t in trimestres:
                 periodos_eval = t.hijos.filter(tipo='periodo').order_by('fecha_inicio')
                 califs = Calificacion.objects.filter(
                     alumno=alumno,
-                    grupo_materia__materia=m,
+                    grupo_materia__materia_id__in=mat['materia_ids'],
                     periodo__in=periodos_eval,
                     calificacion__isnull=False
                 )
@@ -1102,18 +1163,16 @@ def pdf_boleta_alumno(request, alumno_id):
             promedio_final = _redondear_calificacion(sum(valores_validos) / len(valores_validos)) if valores_validos else None
 
             filas.append({
-                'materia': m,
+                'materia': mat['nombre'],
                 'trimestres': trimestres_promedios,
                 'promedio_final': promedio_final,
             })
 
-        # Promedio por trimestre
         promedios_extra = []
         for i in range(len(trimestres)):
             valores = [f['trimestres'][i] for f in filas if f['trimestres'][i] is not None]
             promedios_extra.append(_redondear_calificacion(sum(valores) / len(valores)) if valores else None)
 
-        # Promedio general final
         valores_finales = [f['promedio_final'] for f in filas if f['promedio_final'] is not None]
         promedio_general = _redondear_calificacion(sum(valores_finales) / len(valores_finales)) if valores_finales else None
 
@@ -1124,8 +1183,8 @@ def pdf_boleta_alumno(request, alumno_id):
     html = render_to_string('horarios/pdf_boleta_alumno.html', {
         'alumno': alumno,
         'anio_escolar': anio_escolar,
-        'trimestres': trimestres_json,
-        'periodos': periodos_json,
+        'trimestres': trimestres,
+        'periodos': periodos,
         'tipo_sel': tipo_sel,
         'id_sel': id_sel,
         'columnas': columnas,
@@ -3548,7 +3607,7 @@ def alumno_cambiar_grupo(request, alumno_id):
 
 @login_required
 def boleta_trimestral(request, alumno_id):
-    """Muestra la boleta trimestral y final del alumno."""
+    """Muestra la boleta trimestral y final del alumno con fusión de materias paralelas."""
     alumno = get_object_or_404(Alumno, pk=alumno_id)
 
     es_coordinador = (
@@ -3577,15 +3636,30 @@ def boleta_trimestral(request, alumno_id):
 
     trimestres = anio_escolar.hijos.filter(tipo='trimestre').order_by('fecha_inicio')
 
-    materias = Materia.objects.filter(
+    # Agrupar materias paralelas
+    materias_raw = Materia.objects.filter(
         grupomateria__grupo=alumno.grupo
     ).distinct().order_by('nombre')
+
+    grupos_por_nombre = {}
+    for m in materias_raw:
+        nombre = m.nombre_boleta()
+        if nombre not in grupos_por_nombre:
+            grupos_por_nombre[nombre] = []
+        grupos_por_nombre[nombre].append(m)
+
+    materias_unicas = []
+    for nombre_boleta, grupo_materias in sorted(grupos_por_nombre.items()):
+        materias_unicas.append({
+            'nombre': nombre_boleta,
+            'materia_ids': [m.id for m in grupo_materias],
+        })
 
     filas = []
     suma_final_materia = 0
     cuenta_final_materia = 0
 
-    for m in materias:
+    for mat in materias_unicas:
         promedios_trim = []
         suma_materia = 0
         cuenta_materia = 0
@@ -3594,7 +3668,7 @@ def boleta_trimestral(request, alumno_id):
             periodos_eval = t.hijos.filter(tipo='periodo')
             califs = Calificacion.objects.filter(
                 alumno=alumno,
-                grupo_materia__materia=m,
+                grupo_materia__materia_id__in=mat['materia_ids'],
                 periodo__in=periodos_eval,
                 calificacion__isnull=False,
             )
@@ -3615,7 +3689,7 @@ def boleta_trimestral(request, alumno_id):
             promedio_final = None
 
         filas.append({
-            'materia': m,
+            'materia': mat['nombre'],
             'trimestres': promedios_trim,
             'promedio_final': promedio_final,
         })
@@ -3651,7 +3725,7 @@ def boleta_trimestral(request, alumno_id):
 
 @login_required
 def pdf_boleta_trimestral(request, alumno_id):
-    """Genera PDF de la boleta trimestral."""
+    """Genera PDF de la boleta trimestral con fusión de materias paralelas."""
     alumno = get_object_or_404(Alumno, pk=alumno_id)
 
     es_coordinador = (
@@ -3680,15 +3754,30 @@ def pdf_boleta_trimestral(request, alumno_id):
 
     trimestres = anio_escolar.hijos.filter(tipo='trimestre').order_by('fecha_inicio')
 
-    materias = Materia.objects.filter(
+    # Agrupar materias paralelas
+    materias_raw = Materia.objects.filter(
         grupomateria__grupo=alumno.grupo
     ).distinct().order_by('nombre')
+
+    grupos_por_nombre = {}
+    for m in materias_raw:
+        nombre = m.nombre_boleta()
+        if nombre not in grupos_por_nombre:
+            grupos_por_nombre[nombre] = []
+        grupos_por_nombre[nombre].append(m)
+
+    materias_unicas = []
+    for nombre_boleta, grupo_materias in sorted(grupos_por_nombre.items()):
+        materias_unicas.append({
+            'nombre': nombre_boleta,
+            'materia_ids': [m.id for m in grupo_materias],
+        })
 
     filas = []
     suma_final_materia = 0
     cuenta_final_materia = 0
 
-    for m in materias:
+    for mat in materias_unicas:
         promedios_trim = []
         suma_materia = 0
         cuenta_materia = 0
@@ -3697,7 +3786,7 @@ def pdf_boleta_trimestral(request, alumno_id):
             periodos_eval = t.hijos.filter(tipo='periodo')
             califs = Calificacion.objects.filter(
                 alumno=alumno,
-                grupo_materia__materia=m,
+                grupo_materia__materia_id__in=mat['materia_ids'],
                 periodo__in=periodos_eval,
                 calificacion__isnull=False,
             )
@@ -3718,7 +3807,7 @@ def pdf_boleta_trimestral(request, alumno_id):
             promedio_final = None
 
         filas.append({
-            'materia': m,
+            'materia': mat['nombre'],
             'trimestres': promedios_trim,
             'promedio_final': promedio_final,
         })

@@ -1,6 +1,8 @@
 import os
 from pathlib import Path
 import dj_database_url
+from dotenv import load_dotenv
+load_dotenv()
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -70,10 +72,15 @@ WSGI_APPLICATION = 'sistema_horarios.wsgi.application'
 # BASE DE DATOS:
 # En producción (Render), leerá la variable DATABASE_URL (que apunta a Neon).
 # En local, usará PostgreSQL local con tus credenciales.
+
+
 DATABASES = {
     'default': dj_database_url.config(
-        default='postgresql://postgres:diablo77@localhost:5432/controlescolar',
-        conn_max_age=600,
+        default=os.environ.get(
+            'DATABASE_URL',
+            'postgresql://postgres:diablo77@localhost:5432/controlescolar'
+        ),
+        conn_max_age=0,
         conn_health_checks=True,
     )
 }

@@ -33,8 +33,16 @@
                             {% for celda in fila.celdas %}
                                 {% if celda %}
                                     <td class="celda-ocupada">
-                                        <strong>{{ celda.grupo_materia.materia.nombre }}</strong>
-                                        <small>{{ celda.grupo_materia.grupo.nombre }}</small>
+                                        {% for asig in celda %}
+                                            <div class="{% if not forloop.first %}mt-2 pt-2 border-top{% endif %}">
+                                                <strong>{{ asig.grupo_materia.materia.nombre }}</strong>
+                                                {% if asig.grupo_materia.subgrupo %}
+                                                    <span class="badge bg-info text-dark">Sub {{ asig.grupo_materia.subgrupo }}</span>
+                                                {% endif %}
+                                                <br>
+                                                <small class="text-muted">{{ asig.grupo_materia.grupo.nombre }}</small>
+                                            </div>
+                                        {% endfor %}
                                     </td>
                                 {% else %}
                                     <td class="celda-vacia">—</td>

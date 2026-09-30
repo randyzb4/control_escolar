@@ -8,6 +8,7 @@ from .models import Incidencia
 from .models import EvidenciaDesempeno, CalificacionEvidencia
 from .models import Planeacion, SesionPlaneacion
 from .models import EventoCalendario
+from .models import ConfiguracionInstitucion
 
 from .models import (
     Profesor, Aula, Materia, Grupo, GrupoMateria,
@@ -47,7 +48,6 @@ class ProfesorAdmin(admin.ModelAdmin):
             if PerfilUsuario.objects.filter(profesor=profesor, rol='profesor').exists():
                 continue
 
-            # Generar username desde el nombre
             base = profesor.nombre.lower().replace(' ', '.')
             base = ''.join(c for c in unicodedata.normalize('NFD', base)
                           if unicodedata.category(c) != 'Mn')
@@ -72,7 +72,6 @@ class ProfesorAdmin(admin.ModelAdmin):
         self.message_user(request, f'{creados} usuarios creados. Contraseña temporal: cambiar123')
 
 
-
 @admin.register(Aula)
 class AulaAdmin(admin.ModelAdmin):
     list_display = ('nombre', 'capacidad', 'tipo')
@@ -80,12 +79,21 @@ class AulaAdmin(admin.ModelAdmin):
     search_fields = ('nombre',)
 
 
+# ============================================================
+#  Materia (con soporte para materias paralelas)
+# ============================================================
+
 @admin.register(Materia)
 class MateriaAdmin(admin.ModelAdmin):
-    list_display = ('nombre', 'horas_semanales', 'requiere_laboratorio')
-    list_filter = ('requiere_laboratorio',)
+    list_display = ('nombre', 'horas_semanales', 'requiere_laboratorio', 'es_paralela', 'materia_padre')
+    list_filter = ('requiere_laboratorio', 'es_paralela', 'materia_padre')
     search_fields = ('nombre',)
+    autocomplete_fields = ('materia_padre',)
 
+
+# ============================================================
+#  Grupo y GrupoMateria (con subgrupos)
+# ============================================================
 
 class GrupoMateriaInline(admin.TabularInline):
     model = GrupoMateria
@@ -101,9 +109,10 @@ class GrupoAdmin(admin.ModelAdmin):
 
 @admin.register(GrupoMateria)
 class GrupoMateriaAdmin(admin.ModelAdmin):
-    list_display = ('grupo', 'materia', 'profesor', 'horas_semanales')
-    list_filter = ('grupo', 'materia', 'profesor')
+    list_display = ('grupo', 'materia', 'profesor', 'subgrupo', 'horas_semanales')
+    list_filter = ('grupo', 'materia', 'profesor', 'subgrupo')
     search_fields = ('grupo__nombre', 'materia__nombre', 'profesor__nombre')
+    list_editable = ('subgrupo', 'horas_semanales')
 
 
 @admin.register(DisponibilidadProfesor)
@@ -209,10 +218,10 @@ class ConfiguracionHorarioAdmin(admin.ModelAdmin):
 
 @admin.register(Alumno)
 class AlumnoAdmin(admin.ModelAdmin):
-    list_display = ('matricula', 'nombre_completo', 'grupo', 'activo')
-    list_filter = ('activo', 'grupo')
+    list_display = ('matricula', 'nombre_completo', 'grupo', 'subgrupo', 'activo')
+    list_filter = ('activo', 'grupo', 'subgrupo')
     search_fields = ('matricula', 'nombre', 'apellido_paterno', 'apellido_materno')
-    list_editable = ('activo',)
+    list_editable = ('subgrupo', 'activo')
 
 
 @admin.register(Periodo)
@@ -229,6 +238,7 @@ class CalificacionAdmin(admin.ModelAdmin):
     list_filter = ('periodo', 'grupo_materia__materia', 'grupo_materia__grupo')
     search_fields = ('alumno__nombre', 'alumno__apellido_paterno', 'alumno__matricula')
     autocomplete_fields = ('alumno',)
+
 
 @admin.register(Asistencia)
 class AsistenciaAdmin(admin.ModelAdmin):
@@ -248,6 +258,9 @@ class IncidenciaAdmin(admin.ModelAdmin):
     autocomplete_fields = ('alumno',)
 
 
+# ============================================================
+#  Desempeño
+# ============================================================
 
 class CalificacionEvidenciaInline(admin.TabularInline):
     model = CalificacionEvidencia
@@ -272,7 +285,9 @@ class CalificacionEvidenciaAdmin(admin.ModelAdmin):
     autocomplete_fields = ('alumno',)
 
 
-
+# ============================================================
+#  Planeaciones
+# ============================================================
 
 class SesionPlaneacionInline(admin.TabularInline):
     model = SesionPlaneacion
@@ -302,6 +317,9 @@ class SesionPlaneacionAdmin(admin.ModelAdmin):
     search_fields = ('planeacion__titulo', 'producto', 'recursos')
 
 
+# ============================================================
+#  Calendario
+# ============================================================
 
 @admin.register(EventoCalendario)
 class EventoCalendarioAdmin(admin.ModelAdmin):
@@ -312,7 +330,9 @@ class EventoCalendarioAdmin(admin.ModelAdmin):
     ordering = ('-fecha',)
 
 
-from .models import ConfiguracionInstitucion
+# ============================================================
+#  Configuración institucional
+# ============================================================
 
 @admin.register(ConfiguracionInstitucion)
 class ConfiguracionInstitucionAdmin(admin.ModelAdmin):

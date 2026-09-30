@@ -70,7 +70,7 @@
                     <tbody>
                         {% for fila in filas %}
                             <tr>
-                                <td>{{ fila.materia.nombre }}</td>
+                                <td>{{ fila.materia }}</td>
                                 <td class="text-center">
                                     {% if fila.calificacion %}
                                         {% if fila.calificacion >= 6 %}
@@ -110,7 +110,7 @@
                     <tbody>
                         {% for fila in filas %}
                             <tr>
-                                <td>{{ fila.materia.nombre }}</td>
+                                <td>{{ fila.materia }}</td>
                                 {% for calif in fila.calificaciones %}
                                     <td class="text-center">
                                         {% if calif %}
@@ -184,7 +184,7 @@
                     <tbody>
                         {% for fila in filas %}
                             <tr>
-                                <td>{{ fila.materia.nombre }}</td>
+                                <td>{{ fila.materia }}</td>
                                 {% for calif in fila.trimestres %}
                                     <td class="text-center">
                                         {% if calif %}

@@ -88,7 +88,7 @@
             <tbody>
                 {% for fila in filas %}
                     <tr>
-                        <td class="materia">{{ fila.materia.nombre }}</td>
+                        <td class="materia">{{ fila.materia }}</td>
                         <td>{% if fila.calificacion %}{{ fila.calificacion }}{% else %}—{% endif %}</td>
                     </tr>
                 {% endfor %}

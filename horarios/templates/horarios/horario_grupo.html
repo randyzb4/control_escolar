@@ -9,8 +9,8 @@
         <a href="{% url 'horarios:lista_grupos' %}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Volver</a>
         <a href="{% url 'horarios:pdf_horario_grupo' grupo.id %}" class="btn btn-danger"><i class="bi bi-file-pdf"></i> PDF</a>
         <a class="btn btn-outline-primary" href="{% url 'horarios:lista_alumnos_grupo' grupo.id %}">
-    <i class="bi bi-people"></i> Ver alumnos
-</a>
+            <i class="bi bi-people"></i> Ver alumnos
+        </a>
         <button onclick="window.print()" class="btn btn-outline-primary"><i class="bi bi-printer"></i> Imprimir</button>
     </div>
 </div>
@@ -34,8 +34,16 @@
                             {% for celda in fila.celdas %}
                                 {% if celda %}
                                     <td class="celda-ocupada">
-                                        <strong>{{ celda.grupo_materia.materia.nombre }}</strong><br>
-                                        <small class="text-muted">{{ celda.profesor.nombre }}</small>
+                                        {% for asig in celda %}
+                                            <div class="{% if not forloop.first %}mt-2 pt-2 border-top{% endif %}">
+                                                <strong>{{ asig.grupo_materia.materia.nombre }}</strong>
+                                                {% if asig.grupo_materia.subgrupo %}
+                                                    <span class="badge bg-info text-dark">Sub {{ asig.grupo_materia.subgrupo }}</span>
+                                                {% endif %}
+                                                <br>
+                                                <small class="text-muted">{{ asig.profesor.nombre }}</small>
+                                            </div>
+                                        {% endfor %}
                                     </td>
                                 {% else %}
                                     <td class="celda-vacia">—</td>

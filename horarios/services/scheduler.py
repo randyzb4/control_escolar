@@ -22,10 +22,30 @@ def profesor_ocupado(profesor, slot):
     return Asignacion.objects.filter(profesor=profesor, slot=slot).exists()
 
 def grupo_ocupado(grupo_materia, slot):
-    return Asignacion.objects.filter(
+    """
+    Devuelve True si el grupo ya tiene una clase asignada en ese slot
+    que CHOCA con la del grupo_materia dado.
+
+    Reglas:
+    - Si grupo_materia.subgrupo == '' (todo el grupo): choca con cualquier otra
+      asignación del mismo grupo en el mismo slot.
+    - Si grupo_materia.subgrupo != '': choca solo si la otra asignación
+      es del mismo grupo Y (tiene subgrupo vacío O el mismo subgrupo).
+    """
+    otras = Asignacion.objects.filter(
         grupo_materia__grupo=grupo_materia.grupo,
         slot=slot,
-    ).exists()
+    )
+
+    for otra in otras:
+        gm_otra = otra.grupo_materia
+
+        if not grupo_materia.subgrupo or not gm_otra.subgrupo:
+            return True
+        if grupo_materia.subgrupo == gm_otra.subgrupo:
+            return True
+
+    return False
 
 def buscar_aula_para(materia, slot):
     aulas_ocupadas = Asignacion.objects.filter(slot=slot, aula__isnull=False).values_list('aula_id', flat=True)
@@ -47,23 +67,49 @@ def generar_horario():
             if horas_pendientes <= 0:
                 break
 
-            if profesor_disponible(gm.profesor, slot) and grupo_ocupado(gm, slot):
-                aula = buscar_aula_para(gm.materia, slot)
-                if aula:
-                    try:
-                        asignacion = Asignacion(
-                            grupo_materia=gm,
-                            profesor=gm.profesor,
-                            aula=aula,
-                            slot=slot,
-                            generado_automaticamente=True,
-                        )
-                        asignacion.full_clean()
-                        asignacion.save()
-                        horas_pendientes -= 1
-                        asignadas += 1
-                    except Exception:
-                        # Si hay conflicto, saltamos este slot
-                        continue
+            # 1. Profesor disponible según su disponibilidad declarada
+            if not profesor_disponible(gm.profesor, slot):
+                continue
 
-    return asignadas
+            # 2. Profesor no ocupado en otro grupo
+            if profesor_ocupado(gm.profesor, slot):
+                continue
+
+            # 3. Grupo no ocupado (considerando subgrupos)
+            if grupo_ocupado(gm, slot):
+                continue
+
+            # 4. Buscar aula libre
+            aula = buscar_aula_para(gm.materia, slot)
+            if not aula:
+                continue
+
+            # 5. Crear la asignación
+            try:
+                asignacion = Asignacion(
+                    grupo_materia=gm,
+                    profesor=gm.profesor,
+                    aula=aula,
+                    slot=slot,
+                    generado_automaticamente=True,
+                )
+                asignacion.full_clean()
+                asignacion.save()
+                horas_pendientes -= 1
+                asignadas += 1
+            except Exception:
+                continue
+
+    no_asignadas = []
+    for gm in grupo_materias:
+        horas_asignadas = Asignacion.objects.filter(grupo_materia=gm).count()
+        if horas_asignadas < gm.materia.horas_semanales:
+            faltantes = gm.materia.horas_semanales - horas_asignadas
+            no_asignadas.append({
+                'grupo': gm.grupo.nombre,
+                'materia': gm.materia.nombre,
+                'profesor': gm.profesor.nombre if gm.profesor else 'Sin profesor',
+                'faltantes': faltantes,
+            })
+
+    return asignadas, no_asignadas

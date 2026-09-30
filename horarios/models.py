@@ -30,13 +30,32 @@ class Aula(models.Model):
         return self.nombre
 
 
+
+
 class Materia(models.Model):
     nombre = models.CharField(max_length=150)
     horas_semanales = models.PositiveIntegerField(default=3)
     requiere_laboratorio = models.BooleanField(default=False)
+    materia_padre = models.ForeignKey(
+        'self',
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='variantes',
+        help_text='Si es una variante (ej: Inglés Nivel 1), apunta a la materia principal'
+    )
+    es_paralela = models.BooleanField(
+        default=False,
+        help_text='Indica que esta materia se imparte en paralelo con otra en el mismo horario'
+    )
+
+    def nombre_boleta(self):
+        if self.materia_padre:
+            return self.materia_padre.nombre
+        return self.nombre
 
     def __str__(self):
         return self.nombre
+
 
 
 class Grupo(models.Model):
@@ -48,15 +67,33 @@ class Grupo(models.Model):
 
 
 class GrupoMateria(models.Model):
+    SUBGRUPOS = [
+        ('', 'Todo el grupo'),
+        ('1', 'Solo subgrupo 1'),
+        ('2', 'Solo subgrupo 2'),
+    ]
     grupo = models.ForeignKey(Grupo, on_delete=models.CASCADE)
     materia = models.ForeignKey(Materia, on_delete=models.CASCADE)
     profesor = models.ForeignKey(
         Profesor, on_delete=models.SET_NULL, null=True, blank=True
     )
     horas_semanales = models.PositiveIntegerField(default=3)
+    subgrupo = models.CharField(
+        max_length=2,
+        choices=SUBGRUPOS,
+        blank=True,
+        default='',
+        help_text='Si está vacío, aplica a todo el grupo. Si tiene valor, solo al subgrupo indicado.'
+    )
 
     class Meta:
         unique_together = ('grupo', 'materia')
+
+    def aplica_a_alumno(self, alumno):
+        """Devuelve True si este GrupoMateria aplica al alumno según su subgrupo."""
+        if not self.subgrupo:
+            return True
+        return alumno.subgrupo == self.subgrupo
 
     def __str__(self):
         return f"{self.grupo} - {self.materia}"
@@ -145,14 +182,28 @@ class Asignacion(models.Model):
                 )
 
         if self.grupo_materia and self.slot:
-            conflicto_grupo = Asignacion.objects.filter(
+            otras = Asignacion.objects.filter(
                 grupo_materia__grupo=self.grupo_materia.grupo,
                 slot=self.slot,
-            ).exclude(pk=self.pk).exists()
-            if conflicto_grupo:
-                raise ValidationError(
-                    'El grupo ya tiene una clase asignada en este horario.'
-                )
+            ).exclude(pk=self.pk)
+
+            for otra in otras:
+                gm_actual = self.grupo_materia
+                gm_otra = otra.grupo_materia
+
+                # Si alguno NO tiene subgrupo, choca (aplica a todo el grupo)
+                if not gm_actual.subgrupo or not gm_otra.subgrupo:
+                    raise ValidationError(
+                        'El grupo ya tiene una clase asignada en este horario.'
+                    )
+
+                # Si ambos tienen subgrupo y es el MISMO, choca
+                if gm_actual.subgrupo == gm_otra.subgrupo:
+                    raise ValidationError(
+                        'El subgrupo ya tiene una clase asignada en este horario.'
+                    )
+
+                # Si ambos tienen subgrupo distinto, NO choca (paralelas)
 
         if self.aula and self.slot:
             conflicto_aula = Asignacion.objects.filter(
@@ -338,6 +389,11 @@ class ConfiguracionHorario(models.Model):
 # ============================================================
 
 class Alumno(models.Model):
+    SUBGRUPOS = [
+        ('1', 'Subgrupo 1'),
+        ('2', 'Subgrupo 2'),
+        ('', 'Sin subgrupo'),
+    ]
     matricula = models.CharField(max_length=20, unique=True)
     nombre = models.CharField(max_length=150)
     apellido_paterno = models.CharField(max_length=100)
@@ -349,6 +405,13 @@ class Alumno(models.Model):
     )
     activo = models.BooleanField(default=True)
     fecha_nacimiento = models.DateField(null=True, blank=True)
+    subgrupo = models.CharField(
+        max_length=2,
+        choices=SUBGRUPOS,
+        blank=True,
+        default='',
+        help_text='Subgrupo del alumno para materias paralelas (ej: Inglés Nivel 1 vs Nivel 2)'
+    )
 
     class Meta:
         ordering = ['apellido_paterno', 'apellido_materno', 'nombre']
