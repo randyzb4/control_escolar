@@ -225,6 +225,7 @@ class PerfilUsuario(models.Model):
         ('coordinador', 'Coordinador'),
         ('profesor', 'Profesor'),
         ('consulta', 'Consulta'),
+        ('auxiliar', 'Auxiliar Académico'),
     ]
     usuario = models.OneToOneField(
         User, on_delete=models.CASCADE, related_name='perfil'
@@ -234,7 +235,11 @@ class PerfilUsuario(models.Model):
         Profesor, on_delete=models.SET_NULL,
         null=True, blank=True,
         related_name='perfil_usuario',
-        help_text='Solo para usuarios con rol profesor'
+    )
+    modulos_permitidos = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text='Dict de módulos permitidos: {"grupo": {"ver": true, "editar": false}, ...}'
     )
 
     class Meta:
@@ -243,6 +248,40 @@ class PerfilUsuario(models.Model):
 
     def __str__(self):
         return f"{self.usuario.username} ({self.get_rol_display()})"
+
+    MODULOS_DISPONIBLES = [
+        ('dashboard', 'Dashboard'),
+        ('grupos', 'Grupos'),
+        ('profesores', 'Profesores'),
+        ('carga', 'Carga Docente'),
+        ('resumen', 'Resumen'),
+        ('asignaciones', 'Asignaciones'),
+        ('configurar', 'Configurar Horario'),
+        ('incidencias', 'Incidencias'),
+        ('desempeno', 'Desempeño'),
+        ('planeaciones', 'Planeaciones'),
+        ('calendario', 'Calendario'),
+        ('reportes', 'Reportes'),
+        ('configuracion', 'Configuración Institucional'),
+        ('admin_django', 'Admin Django'),
+    ]
+
+    def tiene_permiso(self, modulo, accion='ver'):
+        """
+        Devuelve True si este perfil tiene permiso para el módulo y acción dados.
+        """
+        if self.rol == 'coordinador':
+            return True
+        modulos = self.modulos_permitidos or {}
+        return modulos.get(modulo, {}).get(accion, False)
+
+    def modulos_ver(self):
+        """Devuelve una lista de claves de módulos donde puede ver."""
+        return [k for k, v in (self.modulos_permitidos or {}).items() if v.get('ver')]
+
+    def modulos_editar(self):
+        """Devuelve una lista de claves de módulos donde puede editar."""
+        return [k for k, v in (self.modulos_permitidos or {}).items() if v.get('editar')]
 
 
 # ============================================================

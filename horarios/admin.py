@@ -9,6 +9,8 @@ from .models import EvidenciaDesempeno, CalificacionEvidencia
 from .models import Planeacion, SesionPlaneacion
 from .models import EventoCalendario
 from .models import ConfiguracionInstitucion
+from .permisos import MODULOS_DISPONIBLES, ACCIONES_DISPONIBLES
+from django.utils.safestring import mark_safe
 
 from .models import (
     Profesor, Aula, Materia, Grupo, GrupoMateria,
@@ -178,13 +180,98 @@ class UserAdmin(BaseUserAdmin):
 admin.site.unregister(User)
 admin.site.register(User, UserAdmin)
 
+class PerfilUsuarioForm(forms.ModelForm):
+    class Meta:
+        model = PerfilUsuario
+        fields = ['usuario', 'rol', 'profesor']
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        instance = self.instance
+
+        for modulo, nombre in MODULOS_DISPONIBLES:
+            for accion, nombre_accion in ACCIONES_DISPONIBLES:
+                field_name = f"mod_{modulo}_{accion}"
+                initial_value = False
+                if instance and instance.pk and instance.modulos_permitidos:
+                    initial_value = instance.modulos_permitidos.get(modulo, {}).get(accion, False)
+                self.fields[field_name] = forms.BooleanField(
+                    required=False,
+                    initial=initial_value,
+                    label=nombre_accion,
+                    widget=forms.CheckboxInput(attrs={'class': 'permiso-checkbox'}),
+                )
+
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+        modulos = {}
+        for modulo, nombre in MODULOS_DISPONIBLES:
+            ver = self.cleaned_data.get(f"mod_{modulo}_ver", False)
+            editar = self.cleaned_data.get(f"mod_{modulo}_editar", False)
+            if ver or editar:
+                modulos[modulo] = {'ver': ver, 'editar': editar}
+        instance.modulos_permitidos = modulos
+        if commit:
+            instance.save()
+        return instance
 
 @admin.register(PerfilUsuario)
 class PerfilUsuarioAdmin(admin.ModelAdmin):
+    form = PerfilUsuarioForm
     list_display = ('usuario', 'rol', 'profesor')
     list_filter = ('rol',)
     search_fields = ('usuario__username', 'profesor__nombre')
     autocomplete_fields = ('profesor',)
+
+    readonly_fields = ('permisos_html',)
+
+    fieldsets = (
+        ('Datos básicos', {
+            'fields': ('usuario', 'rol', 'profesor'),
+        }),
+        ('Permisos por módulo', {
+            'fields': ('permisos_html',),
+            'description': (
+                'Marca los módulos que este usuario puede ver y/o editar. '
+                'Nota: coordinadores y staff tienen acceso total automáticamente.'
+            ),
+        }),
+    )
+
+    def permisos_html(self, obj):
+        """
+        Renderiza una tabla con los checkboxes de permisos.
+        Los nombres de los campos coinciden con los que espera el form.
+        """
+        instance = obj
+        html = '<table style="width:100%; border-collapse: collapse;">'
+        html += '<thead><tr>'
+        html += '<th style="text-align:left; padding:8px; border-bottom:2px solid #ddd;">Módulo</th>'
+        html += '<th style="text-align:center; padding:8px; border-bottom:2px solid #ddd; width:80px;">Ver</th>'
+        html += '<th style="text-align:center; padding:8px; border-bottom:2px solid #ddd; width:80px;">Editar</th>'
+        html += '</tr></thead><tbody>'
+
+        for modulo, nombre in MODULOS_DISPONIBLES:
+            ver = False
+            editar = False
+            if instance and instance.pk and instance.modulos_permitidos:
+                ver = instance.modulos_permitidos.get(modulo, {}).get('ver', False)
+                editar = instance.modulos_permitidos.get(modulo, {}).get('editar', False)
+
+            html += f'<tr>'
+            html += f'<td style="padding:8px; border-bottom:1px solid #eee;">{nombre}</td>'
+            html += f'<td style="text-align:center; padding:8px; border-bottom:1px solid #eee;">'
+            html += f'<input type="checkbox" name="mod_{modulo}_ver" '
+            html += f'{"checked" if ver else ""}></td>'
+            html += f'<td style="text-align:center; padding:8px; border-bottom:1px solid #eee;">'
+            html += f'<input type="checkbox" name="mod_{modulo}_editar" '
+            html += f'{"checked" if editar else ""}></td>'
+            html += f'</tr>'
+
+        html += '</tbody></table>'
+        return mark_safe(html)
+
+    permisos_html.short_description = 'Permisos por módulo'
 
 
 # ============================================================

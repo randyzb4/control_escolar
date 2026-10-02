@@ -11,6 +11,9 @@ from datetime import datetime, date, time as dt_time
 from decimal import Decimal, InvalidOperation
 import math
 from datetime import timedelta
+from .permisos import requiere_permiso, tiene_permiso
+from .decorators import coordinador_requerido
+from .forms import IncidenciaForm
 
 
 from xhtml2pdf import pisa
@@ -107,6 +110,7 @@ def logout_view(request):
 # ============================================================
 
 @login_required
+@requiere_permiso('dashboard', 'ver')
 def dashboard(request):
     total_asignaciones = Asignacion.objects.count()
     total_profesores = Profesor.objects.filter(activo=True).count()
@@ -160,12 +164,14 @@ def ejecutar_generacion(request):
 # ============================================================
 
 @login_required
+@requiere_permiso('grupos', 'ver')
 def lista_grupos(request):
     grupos = Grupo.objects.all().order_by('nombre')
     return render(request, 'horarios/lista_grupos.html', {'grupos': grupos})
 
 
 @login_required
+@requiere_permiso('grupos', 'ver')
 def horario_grupo(request, grupo_id):
     grupo = get_object_or_404(Grupo, pk=grupo_id)
     asignaciones = Asignacion.objects.filter(
@@ -183,6 +189,7 @@ def horario_grupo(request, grupo_id):
 
 
 @login_required
+@requiere_permiso('grupos', 'ver')
 def pdf_horario_grupo(request, grupo_id):
     grupo = get_object_or_404(Grupo, pk=grupo_id)
     es_profesor = hasattr(request.user, 'perfil') and request.user.perfil.profesor
@@ -191,10 +198,7 @@ def pdf_horario_grupo(request, grupo_id):
         or (hasattr(request.user, 'perfil') and request.user.perfil.rol == 'coordinador')
     )
 
-    if not (es_profesor or es_coordinador):
-        messages.error(request, 'No tienes permiso.')
-        return redirect('horarios:dashboard')
-
+    
     config_inst = ConfiguracionInstitucion.get_solo()
 
     html = render_to_string('horarios/pdf_horario_grupo.html', {
@@ -218,12 +222,14 @@ def pdf_horario_grupo(request, grupo_id):
 # ============================================================
 
 @login_required
+@requiere_permiso('profesores', 'ver')
 def lista_profesores(request):
     profesores = Profesor.objects.filter(activo=True).order_by('nombre')
     return render(request, 'horarios/lista_profesores.html', {'profesores': profesores})
 
 
 @login_required
+@requiere_permiso('profesores', 'ver')
 def horario_profesor(request, profesor_id):
     profesor = get_object_or_404(Profesor, pk=profesor_id)
     asignaciones = Asignacion.objects.filter(
@@ -241,6 +247,7 @@ def horario_profesor(request, profesor_id):
 
 
 @login_required
+@requiere_permiso('profesores', 'ver')
 def pdf_horario_profesor(request, profesor_id):
     profesor = get_object_or_404(Profesor, pk=profesor_id)
     es_coordinador = (
@@ -248,9 +255,7 @@ def pdf_horario_profesor(request, profesor_id):
         or (hasattr(request.user, 'perfil') and request.user.perfil.rol == 'coordinador')
     )
 
-    if not es_coordinador:
-        messages.error(request, 'No tienes permiso.')
-        return redirect('horarios:dashboard')
+    
 
     config_inst = ConfiguracionInstitucion.get_solo()
 
@@ -274,6 +279,7 @@ def pdf_horario_profesor(request, profesor_id):
 # ============================================================
 
 @login_required
+@requiere_permiso('carga', 'ver')
 def carga_profesores(request):
     profesores = Profesor.objects.filter(activo=True).annotate(
         total_asignaciones=Count('asignacion')
@@ -282,6 +288,7 @@ def carga_profesores(request):
 
 
 @login_required
+@requiere_permiso('resumen', 'ver')
 def resumen(request):
     total_profesores = Profesor.objects.filter(activo=True).count()
     total_materias = Materia.objects.count()
@@ -311,6 +318,7 @@ def resumen(request):
 
 
 @login_required
+@requiere_permiso('asignaciones', 'ver')
 def lista_asignaciones(request):
     asignaciones = Asignacion.objects.select_related(
         'grupo_materia__grupo',
@@ -354,6 +362,7 @@ def lista_asignaciones(request):
 # ============================================================
 
 @coordinador_requerido
+@requiere_permiso('configurar', 'ver')
 def configurar_horario(request):
     config = ConfiguracionHorario.get_solo()
 
@@ -1256,6 +1265,7 @@ def pdf_boleta_alumno(request, alumno_id):
 
 
 @login_required
+@requiere_permiso('grupos', 'ver')
 def lista_alumnos_grupo(request, grupo_id):
     grupo = get_object_or_404(Grupo, pk=grupo_id)
     alumnos = Alumno.objects.filter(grupo=grupo, activo=True).order_by(
@@ -1280,8 +1290,11 @@ def materias_por_grupo(request):
         or (hasattr(request.user, 'perfil') and request.user.perfil.rol == 'coordinador')
     )
 
+    # Auxiliares y otros roles: validar por permisos granulares
     if not (es_profesor or es_coordinador):
-        return JsonResponse({'materias': []})
+        if not (tiene_permiso(request.user, 'grupos', 'ver') or
+                tiene_permiso(request.user, 'desempeno', 'ver')):
+            return JsonResponse({'materias': []})
 
     if es_profesor and not es_coordinador:
         profesor = request.user.perfil.profesor
@@ -1733,6 +1746,7 @@ def pdf_asistencias_grupo(request, grupo_id):
 # ============================================================
 
 @login_required
+@requiere_permiso('incidencias', 'ver')
 def incidencias_lista(request):
     es_profesor = hasattr(request.user, 'perfil') and request.user.perfil.profesor
     es_coordinador = (
@@ -1740,9 +1754,7 @@ def incidencias_lista(request):
         or (hasattr(request.user, 'perfil') and request.user.perfil.rol == 'coordinador')
     )
 
-    if not (es_profesor or es_coordinador):
-        messages.error(request, 'No tienes permiso para ver las incidencias.')
-        return redirect('horarios:dashboard')
+    
 
     incidencias = Incidencia.objects.select_related(
         'alumno', 'grupo_materia__grupo', 'grupo_materia__materia', 'reportado_por'
@@ -1804,6 +1816,7 @@ def incidencias_lista(request):
 
 
 @login_required
+@requiere_permiso('incidencias', 'editar')
 def incidencia_crear(request):
     if not hasattr(request.user, 'perfil') or not request.user.perfil.profesor:
         messages.error(request, 'Solo los profesores pueden crear incidencias.')
@@ -1838,6 +1851,7 @@ def incidencia_crear(request):
 
 
 @login_required
+@requiere_permiso('incidencias', 'editar')
 def incidencia_editar(request, incidencia_id):
     incidencia = get_object_or_404(Incidencia, pk=incidencia_id)
 
@@ -1875,6 +1889,7 @@ def incidencia_editar(request, incidencia_id):
 
 
 @login_required
+@requiere_permiso('incidencias', 'editar')
 def incidencia_eliminar(request, incidencia_id):
     incidencia = get_object_or_404(Incidencia, pk=incidencia_id)
 
@@ -1977,6 +1992,7 @@ def _calcular_total_desempeno(subtotal):
 
 
 @login_required
+@requiere_permiso('desempeno', 'ver')
 def desempeno_seleccionar(request):
     es_profesor = hasattr(request.user, 'perfil') and request.user.perfil.profesor
     es_coordinador = (
@@ -1984,9 +2000,7 @@ def desempeno_seleccionar(request):
         or (hasattr(request.user, 'perfil') and request.user.perfil.rol == 'coordinador')
     )
 
-    if not (es_profesor or es_coordinador):
-        messages.error(request, 'No tienes permiso para ver esta sección.')
-        return redirect('horarios:dashboard')
+    
 
     if es_profesor and not es_coordinador:
         profesor = request.user.perfil.profesor
@@ -2016,6 +2030,7 @@ def desempeno_seleccionar(request):
 
 
 @login_required
+@requiere_permiso('desempeno', 'ver')
 def desempeno_grupo(request, grupo_id):
     grupo = get_object_or_404(Grupo, pk=grupo_id)
 
@@ -2025,9 +2040,7 @@ def desempeno_grupo(request, grupo_id):
         or (hasattr(request.user, 'perfil') and request.user.perfil.rol == 'coordinador')
     )
 
-    if not (es_profesor or es_coordinador):
-        messages.error(request, 'No tienes permiso.')
-        return redirect('horarios:dashboard')
+    
 
     if es_profesor and not es_coordinador:
         profesor = request.user.perfil.profesor
@@ -2152,19 +2165,27 @@ def desempeno_grupo(request, grupo_id):
 
 
 @login_required
+@requiere_permiso('desempeno', 'editar')
 def evidencia_crear(request, grupo_id):
     grupo = get_object_or_404(Grupo, pk=grupo_id)
 
-    if not hasattr(request.user, 'perfil') or not request.user.perfil.profesor:
-        messages.error(request, 'Solo los profesores pueden crear evidencias.')
-        return redirect('horarios:desempeno_seleccionar')
-
-    profesor = request.user.perfil.profesor
+        # Validación: si es profesor, solo puede crear evidencias en sus grupos.
+    # Si es auxiliar con permiso 'desempeno.editar', puede crear en cualquier grupo.
+    es_profesor = hasattr(request.user, 'perfil') and request.user.perfil.profesor
+    es_coordinador = (
+        request.user.is_staff
+        or (hasattr(request.user, 'perfil') and request.user.perfil.rol == 'coordinador')
+    )
 
     gm_id = request.GET.get('materia') or request.POST.get('grupo_materia')
     periodo_id = request.GET.get('periodo') or request.POST.get('periodo')
 
-    gms = GrupoMateria.objects.filter(grupo=grupo, profesor=profesor).select_related('materia')
+    if es_profesor and not es_coordinador:
+        profesor = request.user.perfil.profesor
+        gms = GrupoMateria.objects.filter(grupo=grupo, profesor=profesor).select_related('materia')
+    else:
+        gms = GrupoMateria.objects.filter(grupo=grupo).select_related('materia')
+
     periodos = Periodo.objects.filter(activo=True).order_by('-fecha_inicio')
 
     if request.method == 'POST':
@@ -2180,7 +2201,14 @@ def evidencia_crear(request, grupo_id):
             messages.error(request, 'Todos los campos son obligatorios.')
         else:
             try:
-                gm = GrupoMateria.objects.get(pk=gm_id, profesor=profesor, grupo=grupo)
+                if es_profesor and not es_coordinador:
+                    gm = GrupoMateria.objects.get(
+                        pk=gm_id,
+                        profesor=request.user.perfil.profesor,
+                        grupo=grupo
+                    )
+                else:
+                    gm = GrupoMateria.objects.get(pk=gm_id, grupo=grupo)
                 periodo = Periodo.objects.get(pk=periodo_id)
                 fecha = datetime.strptime(fecha_str, '%Y-%m-%d').date()
 
@@ -2215,6 +2243,7 @@ def evidencia_crear(request, grupo_id):
 
 
 @login_required
+@requiere_permiso('desempeno', 'editar')
 def evidencia_editar(request, evidencia_id):
     evidencia = get_object_or_404(EvidenciaDesempeno, pk=evidencia_id)
 
@@ -2266,6 +2295,7 @@ def evidencia_editar(request, evidencia_id):
 
 
 @login_required
+@requiere_permiso('desempeno', 'editar')
 def evidencia_eliminar(request, evidencia_id):
     evidencia = get_object_or_404(EvidenciaDesempeno, pk=evidencia_id)
 
@@ -2301,6 +2331,7 @@ def evidencia_eliminar(request, evidencia_id):
 
 
 @login_required
+@requiere_permiso('desempeno', 'editar')
 def capturar_desempeno(request, evidencia_id):
     evidencia = get_object_or_404(EvidenciaDesempeno, pk=evidencia_id)
 
@@ -2369,6 +2400,7 @@ def capturar_desempeno(request, evidencia_id):
 
 
 @login_required
+@requiere_permiso('desempeno', 'editar')
 def mandar_desempeno_a_boleta(request, alumno_id, gm_id, periodo_id):
     """Calcula el total del desempeño y lo guarda como Calificacion (0-10)."""
     if request.method != 'POST':
@@ -2434,6 +2466,7 @@ def mandar_desempeno_a_boleta(request, alumno_id, gm_id, periodo_id):
 # ============================================================
 
 @login_required
+@requiere_permiso('planeaciones', 'ver')
 def planeaciones_lista(request):
     es_profesor = hasattr(request.user, 'perfil') and request.user.perfil.profesor
     es_coordinador = (
@@ -2494,6 +2527,7 @@ def planeaciones_lista(request):
 
 
 @login_required
+@requiere_permiso('planeaciones', 'editar')
 def planeacion_crear(request):
     if not hasattr(request.user, 'perfil') or not request.user.perfil.profesor:
         messages.error(request, 'Solo los profesores pueden crear planeaciones.')
@@ -2554,6 +2588,7 @@ def planeacion_crear(request):
 
 
 @login_required
+@requiere_permiso('planeaciones', 'editar')
 def planeacion_editar(request, planeacion_id):
     plan = get_object_or_404(Planeacion, pk=planeacion_id)
 
@@ -2609,6 +2644,7 @@ def planeacion_editar(request, planeacion_id):
 
 
 @login_required
+@requiere_permiso('planeaciones', 'ver')
 def planeacion_ver(request, planeacion_id):
     plan = get_object_or_404(Planeacion, pk=planeacion_id)
 
@@ -2637,6 +2673,7 @@ def planeacion_ver(request, planeacion_id):
 
 
 @login_required
+@requiere_permiso('planeaciones', 'editar')
 def planeacion_eliminar(request, planeacion_id):
     plan = get_object_or_404(Planeacion, pk=planeacion_id)
 
@@ -2666,6 +2703,7 @@ def planeacion_eliminar(request, planeacion_id):
 
 
 @login_required
+@requiere_permiso('planeaciones', 'editar')
 def sesion_crear(request, planeacion_id):
     plan = get_object_or_404(Planeacion, pk=planeacion_id)
 
@@ -2711,6 +2749,7 @@ def sesion_crear(request, planeacion_id):
 
 
 @login_required
+@requiere_permiso('planeaciones', 'editar')
 def sesion_editar(request, sesion_id):
     sesion = get_object_or_404(SesionPlaneacion, pk=sesion_id)
     plan = sesion.planeacion
@@ -2750,6 +2789,7 @@ def sesion_editar(request, sesion_id):
 
 
 @login_required
+@requiere_permiso('planeaciones', 'editar')
 def sesion_eliminar(request, sesion_id):
     sesion = get_object_or_404(SesionPlaneacion, pk=sesion_id)
     plan = sesion.planeacion
@@ -2771,6 +2811,7 @@ def sesion_eliminar(request, sesion_id):
 
 
 @login_required
+@requiere_permiso('planeaciones', 'ver')
 def pdf_planeacion(request, planeacion_id):
     plan = get_object_or_404(Planeacion, pk=planeacion_id)
 
@@ -2809,6 +2850,7 @@ def pdf_planeacion(request, planeacion_id):
 
 
 @login_required
+@requiere_permiso('reportes', 'ver')
 def reportes(request):
     """
     Dashboard de reportes con estadísticas y gráficos.
@@ -2819,9 +2861,7 @@ def reportes(request):
         or (hasattr(request.user, 'perfil') and request.user.perfil.rol == 'coordinador')
     )
 
-    if not es_coordinador:
-        messages.error(request, 'No tienes permiso para ver los reportes.')
-        return redirect('horarios:dashboard')
+    
 
     # Periodo seleccionado (el más reciente activo por defecto)
     periodos = Periodo.objects.filter(activo=True).order_by('-fecha_inicio')
@@ -3046,6 +3086,7 @@ def pdf_lista_asistencia(request, grupo_id):
 
 
 @login_required
+@requiere_permiso('desempeno', 'ver')
 def desempeno_pendientes(request, grupo_id):
     """
     Muestra los alumnos del grupo que tienen evidencias sin capturar
@@ -3059,9 +3100,7 @@ def desempeno_pendientes(request, grupo_id):
         or (hasattr(request.user, 'perfil') and request.user.perfil.rol == 'coordinador')
     )
 
-    if not (es_profesor or es_coordinador):
-        messages.error(request, 'No tienes permiso.')
-        return redirect('horarios:dashboard')
+    
 
     if es_profesor and not es_coordinador:
         profesor = request.user.perfil.profesor
@@ -3096,9 +3135,11 @@ def desempeno_pendientes(request, grupo_id):
     ).order_by('fecha', 'nombre')
 
     # Alumnos del grupo
-    alumnos = Alumno.objects.filter(
-        grupo=grupo, activo=True
-    ).order_by('apellido_paterno', 'apellido_materno', 'nombre')
+        # Alumnos del grupo (respetando subgrupo del GrupoMateria)
+    alumnos = Alumno.objects.filter(grupo=grupo, activo=True)
+    if gm.subgrupo:
+        alumnos = alumnos.filter(subgrupo=gm.subgrupo)
+    alumnos = alumnos.order_by('apellido_paterno', 'apellido_materno', 'nombre')
 
     # Calificaciones existentes: {(alumno_id, evidencia_id): calificacion_obj}
     calificaciones = {}
@@ -3142,6 +3183,7 @@ def desempeno_pendientes(request, grupo_id):
 from datetime import timedelta
 
 @login_required
+@requiere_permiso('calendario', 'ver')
 def calendario(request):
     """Vista mensual del calendario con eventos."""
     import calendar
@@ -3232,6 +3274,7 @@ def calendario(request):
     })
 
 @login_required
+@requiere_permiso('calendario', 'editar')
 def evento_crear(request):
     """Crear un evento del calendario."""
     es_coordinador = (
@@ -3295,6 +3338,7 @@ def evento_crear(request):
     })
 
 @login_required
+@requiere_permiso('calendario', 'editar')
 def evento_editar(request, evento_id):
     """Editar un evento."""
     evento = get_object_or_404(EventoCalendario, pk=evento_id)
@@ -3343,6 +3387,7 @@ def evento_editar(request, evento_id):
     })
 
 @login_required
+@requiere_permiso('calendario', 'editar')
 def evento_eliminar(request, evento_id):
     """Eliminar un evento."""
     evento = get_object_or_404(EventoCalendario, pk=evento_id)
@@ -3368,6 +3413,7 @@ def evento_eliminar(request, evento_id):
     })
 
 @login_required
+@requiere_permiso('calendario', 'ver')
 def pdf_calendario(request):
     """Genera PDF del calendario mensual."""
     import calendar
@@ -3444,6 +3490,7 @@ def pdf_calendario(request):
 from .models import ConfiguracionInstitucion
 
 @login_required
+@requiere_permiso('configuracion', 'ver')
 def configuracion_institucion(request):
     """Editar la configuración de la institución."""
     es_coordinador = (
