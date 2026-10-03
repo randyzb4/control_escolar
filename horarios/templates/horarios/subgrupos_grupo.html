@@ -1,0 +1,148 @@
+{% extends 'horarios/base.html' %}
+
+{% block title %}Gestión de subgrupos - {{ grupo.nombre }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>
+        <i class="bi bi-people-fill"></i> Gestión de subgrupos: {{ grupo.nombre }}
+    </h2>
+    <div class="d-flex gap-2">
+        <a href="{% url 'horarios:subgrupos_seleccionar' %}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Volver
+        </a>
+    </div>
+</div>
+
+{% if not materias %}
+    <div class="alert alert-warning">
+        <i class="bi bi-exclamation-triangle"></i>
+        Este grupo no tiene materias con subgrupos configurados.
+    </div>
+{% else %}
+
+<form method="get" class="mb-4">
+    <div class="input-group">
+        <label class="input-group-text">Materia:</label>
+        <select name="materia" class="form-select" onchange="this.form.submit()">
+            {% for m in materias %}
+                <option value="{{ m.id }}" {% if m.id == materia_sel.id %}selected{% endif %}>
+                    {{ m.nombre }}
+                </option>
+            {% endfor %}
+        </select>
+    </div>
+</form>
+
+{% if materia_sel %}
+    <form method="post" id="form-subgrupos">
+        {% csrf_token %}
+        <input type="hidden" name="materia_id" value="{{ materia_sel.id }}">
+        <input type="hidden" name="subgrupo_destino" id="subgrupo_destino" value="">
+
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0">
+                            <i class="bi bi-1-circle"></i> Subgrupo 1
+                            <span class="badge bg-light text-dark">{{ alumnos_sub1|length }}</span>
+                        </h5>
+                    </div>
+                    <div class="card-body" style="max-height: 500px; overflow-y: auto;">
+                        {% for a in alumnos_sub1 %}
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox"
+                                       name="alumnos" value="{{ a.id }}" id="alumno_s1_{{ a.id }}">
+                                <label class="form-check-label" for="alumno_s1_{{ a.id }}">
+                                    {{ a.apellido_paterno }} {{ a.apellido_materno|default:'' }} {{ a.nombre }}
+                                </label>
+                            </div>
+                        {% empty %}
+                            <p class="text-muted">No hay alumnos en este subgrupo.</p>
+                        {% endfor %}
+                    </div>
+                    <div class="card-footer">
+                        <button type="button" class="btn btn-primary w-100"
+                                onclick="moverAlumnos('1')">
+                            <i class="bi bi-arrow-left"></i> Mover seleccionados a Subgrupo 1
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header bg-success text-white">
+                        <h5 class="mb-0">
+                            <i class="bi bi-2-circle"></i> Subgrupo 2
+                            <span class="badge bg-light text-dark">{{ alumnos_sub2|length }}</span>
+                        </h5>
+                    </div>
+                    <div class="card-body" style="max-height: 500px; overflow-y: auto;">
+                        {% for a in alumnos_sub2 %}
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox"
+                                       name="alumnos" value="{{ a.id }}" id="alumno_s2_{{ a.id }}">
+                                <label class="form-check-label" for="alumno_s2_{{ a.id }}">
+                                    {{ a.apellido_paterno }} {{ a.apellido_materno|default:'' }} {{ a.nombre }}
+                                </label>
+                            </div>
+                        {% empty %}
+                            <p class="text-muted">No hay alumnos en este subgrupo.</p>
+                        {% endfor %}
+                    </div>
+                    <div class="card-footer">
+                        <button type="button" class="btn btn-success w-100"
+                                onclick="moverAlumnos('2')">
+                            <i class="bi bi-arrow-right"></i> Mover seleccionados a Subgrupo 2
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {% if alumnos_sin %}
+            <div class="card mt-4">
+                <div class="card-header bg-secondary text-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-question-circle"></i> Sin subgrupo
+                        <span class="badge bg-light text-dark">{{ alumnos_sin|length }}</span>
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% for a in alumnos_sin %}
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox"
+                                   name="alumnos" value="{{ a.id }}" id="alumno_sin_{{ a.id }}">
+                            <label class="form-check-label" for="alumno_sin_{{ a.id }}">
+                                {{ a.apellido_paterno }} {{ a.apellido_materno|default:'' }} {{ a.nombre }}
+                            </label>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        {% endif %}
+
+    </form>
+{% endif %}
+
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function moverAlumnos(subgrupo) {
+    const seleccionados = document.querySelectorAll('input[name="alumnos"]:checked');
+    if (seleccionados.length === 0) {
+        alert('Selecciona al menos un alumno.');
+        return;
+    }
+    if (!confirm(`¿Mover ${seleccionados.length} alumno(s) al subgrupo ${subgrupo}?`)) {
+        return;
+    }
+    document.getElementById('subgrupo_destino').value = subgrupo;
+    document.getElementById('form-subgrupos').submit();
+}
+</script>
+{% endblock %}

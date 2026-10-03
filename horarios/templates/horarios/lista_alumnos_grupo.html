@@ -1,4 +1,5 @@
 {% extends 'horarios/base.html' %}
+{% load permisos %}
 
 {% block title %}Alumnos de {{ grupo.nombre }}{% endblock %}
 
@@ -18,13 +19,20 @@
         <a class="btn btn-primary" href="{% url 'horarios:calificaciones_grupo' grupo.id %}">
             <i class="bi bi-table"></i> Calificaciones del grupo
         </a>
-        <a class="btn btn-info" href="{% url 'horarios:asistencias_grupo' grupo.id %}">
-            <i class="bi bi-clipboard-check"></i> Asistencias del grupo
-        </a>
 
-        <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#modalListaAsistencia">
-    <i class="bi bi-file-pdf"></i> Lista imprimible
-</button>
+        {% puede_ver user 'asistencias_grupo' as ver_asistencias %}
+        {% if ver_asistencias %}
+            <a class="btn btn-info" href="{% url 'horarios:asistencias_grupo' grupo.id %}">
+                <i class="bi bi-clipboard-check"></i> Asistencias del grupo
+            </a>
+        {% endif %}
+
+        {% puede_ver user 'lista_asistencia' as ver_lista %}
+        {% if ver_lista %}
+            <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#modalListaAsistencia">
+                <i class="bi bi-file-pdf"></i> Lista imprimible
+            </button>
+        {% endif %}
     </div>
 </div>
 
@@ -64,11 +72,9 @@
                                         <a class="btn btn-sm btn-outline-danger" href="{% url 'horarios:alumno_eliminar' alumno.id %}" title="Eliminar">
                                             <i class="bi bi-trash"></i>
                                         </a>
-
+                                        <a class="btn btn-sm btn-outline-info" href="{% url 'horarios:boleta_trimestral' alumno.id %}" title="Boleta trimestral">
+                                            <i class="bi bi-calendar-check"></i>
                                         </a>
-    <a class="btn btn-sm btn-outline-info" href="{% url 'horarios:boleta_trimestral' alumno.id %}" title="Boleta trimestral">
-        <i class="bi bi-calendar-check"></i>
-    </a>
                                     </div>
                                 </td>
                             </tr>
@@ -87,6 +93,7 @@
     </div>
 </div>
 
+{% if ver_lista %}
 <!-- Modal para generar lista de asistencia imprimible -->
 <div class="modal fade" id="modalListaAsistencia" tabindex="-1">
     <div class="modal-dialog">
@@ -131,4 +138,6 @@
         </div>
     </div>
 </div>
+{% endif %}
+
 {% endblock %}

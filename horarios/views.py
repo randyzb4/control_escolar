@@ -14,6 +14,10 @@ from datetime import timedelta
 from .permisos import requiere_permiso, tiene_permiso
 from .decorators import coordinador_requerido
 from .forms import IncidenciaForm
+from .utils import alumnos_para_grupo_materia
+from .models import Grupo, Alumno, AlumnoSubgrupoMateria, Materia
+
+
 
 
 from xhtml2pdf import pisa
@@ -515,9 +519,7 @@ def capturar_calificaciones(request):
         periodo = Periodo.objects.get(id=periodo_id)
 
         # Filtrar alumnos por subgrupo del GrupoMateria
-        alumnos_qs = Alumno.objects.filter(grupo=gm.grupo, activo=True)
-        if gm.subgrupo:
-            alumnos_qs = alumnos_qs.filter(subgrupo=gm.subgrupo)
+        alumnos_qs = alumnos_para_grupo_materia(gm)
 
         for alumno in alumnos_qs:
             valor = request.POST.get(f'calif_{alumno.id}')
@@ -549,12 +551,7 @@ def capturar_calificaciones(request):
         periodo = Periodo.objects.get(id=periodo_id)
 
         # Filtrar alumnos por subgrupo del GrupoMateria
-        alumnos = Alumno.objects.filter(
-            grupo=gm.grupo, activo=True
-        )
-        if gm.subgrupo:
-            alumnos = alumnos.filter(subgrupo=gm.subgrupo)
-        alumnos = alumnos.order_by('apellido_paterno', 'apellido_materno', 'nombre')
+        alumnos = alumnos_para_grupo_materia(gm)
 
         calificaciones = Calificacion.objects.filter(
             grupo_materia=gm, periodo=periodo
@@ -615,9 +612,7 @@ def pase_lista(request):
         )
 
         # Filtrar alumnos por subgrupo del GrupoMateria
-        alumnos_qs = Alumno.objects.filter(grupo=gm.grupo, activo=True)
-        if gm.subgrupo:
-            alumnos_qs = alumnos_qs.filter(subgrupo=gm.subgrupo)
+        alumnos_qs = alumnos_para_grupo_materia(gm)
 
         for alumno in alumnos_qs:
             estado = request.POST.get(f'estado_{alumno.id}', 'presente')
@@ -653,12 +648,7 @@ def pase_lista(request):
                 grupo_id=grupo_id, materia_id=materia_id, profesor=profesor
             )
             # Filtrar alumnos por subgrupo del GrupoMateria
-            alumnos = Alumno.objects.filter(
-                grupo=gm.grupo, activo=True
-            )
-            if gm.subgrupo:
-                alumnos = alumnos.filter(subgrupo=gm.subgrupo)
-            alumnos = alumnos.order_by('apellido_paterno', 'apellido_materno', 'nombre')
+            alumnos = alumnos_para_grupo_materia(gm)
 
             asistencias = Asistencia.objects.filter(
                 grupo_materia=gm, fecha=fecha
@@ -1557,6 +1547,7 @@ def pdf_calificaciones_grupo(request, grupo_id):
 
 
 @login_required
+@requiere_permiso('asistencias_grupo', 'ver')
 def asistencias_grupo(request, grupo_id):
     grupo = get_object_or_404(Grupo, pk=grupo_id)
 
@@ -1572,9 +1563,7 @@ def asistencias_grupo(request, grupo_id):
             grupo=grupo, profesor=profesor
         ).exists()
 
-    if not (es_coordinador or es_profesor_del_grupo):
-        messages.error(request, 'No tienes permiso para ver este grupo.')
-        return redirect('horarios:dashboard')
+    
 
     materias = Materia.objects.filter(
         grupomateria__grupo=grupo
@@ -1649,6 +1638,7 @@ def asistencias_grupo(request, grupo_id):
 
 
 @login_required
+@requiere_permiso('asistencias_grupo', 'ver')
 def pdf_asistencias_grupo(request, grupo_id):
     grupo = get_object_or_404(Grupo, pk=grupo_id)
 
@@ -1664,9 +1654,7 @@ def pdf_asistencias_grupo(request, grupo_id):
             grupo=grupo, profesor=profesor
         ).exists()
 
-    if not (es_coordinador or es_profesor_del_grupo):
-        messages.error(request, 'No tienes permiso.')
-        return redirect('horarios:dashboard')
+    
 
     materia_id = request.GET.get('materia')
     fecha_inicio_str = request.GET.get('fecha_inicio')
@@ -1885,6 +1873,7 @@ def incidencia_editar(request, incidencia_id):
         'form': form,
         'tipos': Incidencia.TIPOS,
         'accion': 'editar',
+        'incidencia': incidencia,
     })
 
 
@@ -2107,16 +2096,7 @@ def desempeno_grupo(request, grupo_id):
 
     suma_porcentajes = sum(float(e.porcentaje) for e in evidencias)
 
-    alumnos = Alumno.objects.filter(
-        grupo=grupo, activo=True
-    )
-    if gm.subgrupo:
-        alumnos = alumnos.filter(subgrupo=gm.subgrupo)
-    alumnos = alumnos.order_by('apellido_paterno', 'apellido_materno', 'nombre')
-
-    # Filtrar alumnos por subgrupo del GrupoMateria
-    if gm.subgrupo:
-        alumnos = alumnos.filter(subgrupo=gm.subgrupo)
+    alumnos = alumnos_para_grupo_materia(gm)
 
     calificaciones = {}
     for c in CalificacionEvidencia.objects.filter(
@@ -2995,6 +2975,7 @@ def reportes(request):
 
 
 @login_required
+@requiere_permiso('lista_asistencia', 'ver')
 def pdf_lista_asistencia(request, grupo_id):
     """
     Genera un PDF con la lista de asistencia imprimible del grupo.
@@ -3017,9 +2998,7 @@ def pdf_lista_asistencia(request, grupo_id):
             grupo=grupo, profesor=profesor
         ).exists()
 
-    if not (es_coordinador or es_profesor_del_grupo):
-        messages.error(request, 'No tienes permiso.')
-        return redirect('horarios:dashboard')
+    
 
     hoy = date.today()
     try:
@@ -3136,10 +3115,7 @@ def desempeno_pendientes(request, grupo_id):
 
     # Alumnos del grupo
         # Alumnos del grupo (respetando subgrupo del GrupoMateria)
-    alumnos = Alumno.objects.filter(grupo=grupo, activo=True)
-    if gm.subgrupo:
-        alumnos = alumnos.filter(subgrupo=gm.subgrupo)
-    alumnos = alumnos.order_by('apellido_paterno', 'apellido_materno', 'nombre')
+    alumnos = alumnos_para_grupo_materia(gm)
 
     # Calificaciones existentes: {(alumno_id, evidencia_id): calificacion_obj}
     calificaciones = {}
@@ -3956,3 +3932,103 @@ def pdf_boleta_trimestral(request, alumno_id):
     if pisa_status.err:
         return HttpResponse('Error al generar PDF', status=500)
     return response
+
+
+@login_required
+@requiere_permiso('grupos', 'editar')
+def subgrupos_seleccionar(request):
+    if request.method == 'POST':
+        grupo_id = request.POST.get('grupo')
+        return redirect('horarios:subgrupos_grupo', grupo_id=grupo_id)
+
+    grupos = Grupo.objects.all()
+    return render(request, 'horarios/subgrupos_seleccionar.html', {'grupos': grupos})
+
+
+@login_required
+@requiere_permiso('subgrupos', 'editar')
+def subgrupos_grupo(request, grupo_id):
+    grupo = get_object_or_404(Grupo, pk=grupo_id)
+
+    # Materias del grupo que tienen al menos un GrupoMateria con subgrupo
+    materias_con_subgrupo = Materia.objects.filter(
+        grupomateria__grupo=grupo,
+        grupomateria__subgrupo__in=['1', '2']
+    ).distinct().order_by('nombre')
+
+    if not materias_con_subgrupo.exists():
+        return render(request, 'horarios/subgrupos_grupo.html', {
+            'grupo': grupo,
+            'materias': [],
+        })
+
+    materia_id = request.GET.get('materia') or request.POST.get('materia_id')
+
+    materia_sel = None
+    if materia_id:
+        try:
+            materia_sel = materias_con_subgrupo.get(pk=materia_id)
+        except Materia.DoesNotExist:
+            materia_sel = None
+
+    if not materia_sel:
+        materia_sel = materias_con_subgrupo.first()
+
+    # POST: mover alumnos
+    if request.method == 'POST':
+        alumnos_ids = request.POST.getlist('alumnos')
+        subgrupo_destino = request.POST.get('subgrupo_destino')
+
+        if alumnos_ids and subgrupo_destino in ('1', '2'):
+            for alumno_id in alumnos_ids:
+                try:
+                    alumno = Alumno.objects.get(pk=alumno_id, grupo=grupo)
+                    AlumnoSubgrupoMateria.objects.update_or_create(
+                        alumno=alumno,
+                        materia=materia_sel,
+                        defaults={'subgrupo': subgrupo_destino}
+                    )
+                except Alumno.DoesNotExist:
+                    continue
+
+            messages.success(request, f'{len(alumnos_ids)} alumno(s) movido(s) al subgrupo {subgrupo_destino}.')
+
+        return redirect(
+            f"{reverse('horarios:subgrupos_grupo', kwargs={'grupo_id': grupo.id})}"
+            f"?materia={materia_sel.id}"
+        )
+
+    # GET: mostrar alumnos divididos por subgrupo efectivo
+    alumnos = Alumno.objects.filter(grupo=grupo, activo=True).order_by(
+        'apellido_paterno', 'apellido_materno', 'nombre'
+    )
+
+    # Excepciones para esta materia
+    excepciones = {
+        e.alumno_id: e.subgrupo
+        for e in AlumnoSubgrupoMateria.objects.filter(materia=materia_sel)
+    }
+
+    alumnos_sub1 = []
+    alumnos_sub2 = []
+    alumnos_sin = []
+
+    for a in alumnos:
+        # Subgrupo efectivo: excepción > subgrupo global
+        sub_efectivo = excepciones.get(a.id, a.subgrupo)
+
+        if sub_efectivo == '1':
+            alumnos_sub1.append(a)
+        elif sub_efectivo == '2':
+            alumnos_sub2.append(a)
+        else:
+            alumnos_sin.append(a)
+
+    return render(request, 'horarios/subgrupos_grupo.html', {
+        'grupo': grupo,
+        'materias': materias_con_subgrupo,
+        'materia_sel': materia_sel,
+        'alumnos_sub1': alumnos_sub1,
+        'alumnos_sub2': alumnos_sub2,
+        'alumnos_sin': alumnos_sin,
+    })

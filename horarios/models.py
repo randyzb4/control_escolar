@@ -987,3 +987,46 @@ class ConfiguracionInstitucion(models.Model):
                 return f"data:{mime};base64,{data}"
         except Exception:
             return None
+
+
+class AlumnoSubgrupoMateria(models.Model):
+    """
+    Excepción: un alumno puede tener un subgrupo distinto en una materia
+    específica (ej: Ed. Física o Música), diferente a su Alumno.subgrupo global.
+
+    Uso:
+    - Si existe un registro aquí, el subgrupo del alumno para esa materia es
+      este valor.
+    - Si no existe, el subgrupo del alumno es Alumno.subgrupo (como hasta ahora).
+    """
+    SUBGRUPOS = [
+        ('1', 'Subgrupo 1'),
+        ('2', 'Subgrupo 2'),
+    ]
+
+    alumno = models.ForeignKey(
+        'Alumno',
+        on_delete=models.CASCADE,
+        related_name='excepciones_subgrupo'
+    )
+    materia = models.ForeignKey(
+        'Materia',
+        on_delete=models.CASCADE,
+        related_name='excepciones_subgrupo'
+    )
+    subgrupo = models.CharField(
+        max_length=2,
+        choices=SUBGRUPOS,
+        help_text='Subgrupo específico del alumno para esta materia'
+    )
+    creado_en = models.DateTimeField(auto_now_add=True)
+    actualizado_en = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ('alumno', 'materia')
+        verbose_name = 'Excepción de subgrupo por materia'
+        verbose_name_plural = 'Excepciones de subgrupo por materia'
+        ordering = ['alumno__apellido_paterno', 'alumno__apellido_materno', 'alumno__nombre', 'materia__nombre']
+
+    def __str__(self):
+        return f"{self.alumno} - {self.materia}: Sub {self.subgrupo}"

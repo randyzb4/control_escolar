@@ -76,7 +76,12 @@
                                 <td>{{ i.grupo_materia.grupo.nombre }}</td>
                                 <td>{{ i.grupo_materia.materia.nombre }}</td>
                                 <td><span class="badge bg-{{ i.color_badge }}">{{ i.get_tipo_reporte_display }}</span></td>
-                                <td>{{ i.resumen|truncatechars:80 }}</td>
+                                <td>
+    <span title="{{ i.resumen }}">{{ i.resumen|truncatechars:80 }}</span>
+    <button type="button" class="btn btn-link btn-sm p-0" data-bs-toggle="modal" data-bs-target="#modalResumen{{ i.id }}">
+        Ver
+    </button>
+</td>
                                 <td>
                                     <a href="{% url 'horarios:incidencia_editar' i.id %}" class="btn btn-sm btn-outline-primary">Editar</a>
                                     <a href="{% url 'horarios:incidencia_eliminar' i.id %}" class="btn btn-sm btn-outline-danger">Eliminar</a>
@@ -95,4 +100,29 @@
 {% endif %}
 
 <a href="{% url 'horarios:dashboard' %}" class="btn btn-secondary mt-3">Volver al dashboard</a>
+
+{% for i in incidencias %}
+    <div class="modal fade" id="modalResumen{{ i.id }}" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="bi bi-exclamation-triangle"></i> Resumen completo
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p><strong>Alumno:</strong> {{ i.alumno.apellido_paterno }} {{ i.alumno.apellido_materno|default:'' }} {{ i.alumno.nombre }}</p>
+                    <p><strong>Fecha:</strong> {{ i.fecha|date:"d/m/Y" }}</p>
+                    <p><strong>Tipo:</strong> {{ i.get_tipo_reporte_display }}</p>
+                    <hr>
+                    <p>{{ i.resumen|linebreaks }}</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endfor %}
 {% endblock %}

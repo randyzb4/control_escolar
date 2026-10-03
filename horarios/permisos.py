@@ -22,6 +22,9 @@ from django.shortcuts import redirect
 MODULOS_DISPONIBLES = [
     ('dashboard', 'Dashboard'),
     ('grupos', 'Grupos'),
+    ('subgrupos', 'Gestión de Subgrupos'),
+    ('lista_asistencia', 'Lista de Asistencia Imprimible'),
+    ('asistencias_grupo', 'Asistencias del Grupo'),
     ('profesores', 'Profesores'),
     ('carga', 'Carga Docente'),
     ('resumen', 'Resumen'),

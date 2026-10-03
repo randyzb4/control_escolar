@@ -85,7 +85,8 @@ urlpatterns = [
     path('alumnos/<int:alumno_id>/cambiar-grupo/', views.alumno_cambiar_grupo, name='alumno_cambiar_grupo'),
     path('alumnos/<int:alumno_id>/boleta-trimestral/', views.boleta_trimestral, name='boleta_trimestral'),
     path('alumnos/<int:alumno_id>/boleta-trimestral/pdf/', views.pdf_boleta_trimestral, name='pdf_boleta_trimestral'),
-
+    path('subgrupos/', views.subgrupos_seleccionar, name='subgrupos_seleccionar'),
+    path('subgrupos/grupo/<int:grupo_id>/', views.subgrupos_grupo, name='subgrupos_grupo'),
 
 
 
