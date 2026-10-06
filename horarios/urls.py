@@ -87,6 +87,7 @@ urlpatterns = [
     path('alumnos/<int:alumno_id>/boleta-trimestral/pdf/', views.pdf_boleta_trimestral, name='pdf_boleta_trimestral'),
     path('subgrupos/', views.subgrupos_seleccionar, name='subgrupos_seleccionar'),
     path('subgrupos/grupo/<int:grupo_id>/', views.subgrupos_grupo, name='subgrupos_grupo'),
+    path('api/alumnos-por-grupo/', views.alumnos_por_grupo, name='alumnos_por_grupo'),
 
 
 

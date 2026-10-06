@@ -616,8 +616,19 @@ class Incidencia(models.Model):
     alumno = models.ForeignKey(
         Alumno, on_delete=models.CASCADE, related_name='incidencias'
     )
+    grupo = models.ForeignKey(
+        'Grupo',
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='incidencias',
+        help_text='Grupo del alumno (obligatorio para incidencias creadas por auxiliares)'
+    )
     grupo_materia = models.ForeignKey(
-        GrupoMateria, on_delete=models.CASCADE, related_name='incidencias'
+        'GrupoMateria',
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='incidencias',
+        help_text='Materia específica (opcional, para incidencias creadas por profesores)'
     )
     tipo_reporte = models.CharField(max_length=20, choices=TIPOS, default='conducta')
     resumen = models.TextField()

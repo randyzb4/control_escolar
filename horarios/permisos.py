@@ -37,6 +37,7 @@ MODULOS_DISPONIBLES = [
     ('reportes', 'Reportes'),
     ('configuracion', 'Configuración Institucional'),
     ('admin_django', 'Admin Django'),
+    ('pase_lista', 'Pase de Lista'),
 ]
 
 ACCIONES_DISPONIBLES = [

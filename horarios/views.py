@@ -13,9 +13,9 @@ import math
 from datetime import timedelta
 from .permisos import requiere_permiso, tiene_permiso
 from .decorators import coordinador_requerido
-from .forms import IncidenciaForm
 from .utils import alumnos_para_grupo_materia
 from .models import Grupo, Alumno, AlumnoSubgrupoMateria, Materia
+from .forms import IncidenciaForm, IncidenciaAuxiliarForm
 
 
 
@@ -31,7 +31,7 @@ from .models import (
     Planeacion, SesionPlaneacion, EventoCalendario, ConfiguracionInstitucion,
 )
 from .decorators import coordinador_requerido
-from .forms import IncidenciaForm
+
 
 
 # ============================================================
@@ -572,15 +572,17 @@ def capturar_calificaciones(request):
 
 
 @login_required
+@requiere_permiso('pase_lista', 'ver')
 def pase_lista(request):
-    if not hasattr(request.user, 'perfil') or not request.user.perfil.profesor:
-        messages.error(request, 'Tu usuario no está vinculado a un profesor.')
-        return redirect('horarios:dashboard')
+    es_profesor = hasattr(request.user, 'perfil') and request.user.perfil.profesor
 
-    profesor = request.user.perfil.profesor
-    grupos = Grupo.objects.filter(
-        grupomateria__profesor=profesor
-    ).distinct().order_by('nombre')
+    if es_profesor:
+        profesor = request.user.perfil.profesor
+        grupos = Grupo.objects.filter(
+            grupomateria__profesor=profesor
+        ).distinct().order_by('nombre')
+    else:
+        grupos = Grupo.objects.all().order_by('nombre')
 
     # Leer parámetros de GET o POST
     grupo_id = request.POST.get('grupo') or request.GET.get('grupo')
@@ -590,10 +592,15 @@ def pase_lista(request):
     # Calcular materias SIEMPRE que haya grupo seleccionado
     materias = []
     if grupo_id:
-        materias = Materia.objects.filter(
-            grupomateria__grupo_id=grupo_id,
-            grupomateria__profesor=profesor
-        ).distinct().order_by('nombre')
+        if es_profesor:
+            materias = Materia.objects.filter(
+                grupomateria__grupo_id=grupo_id,
+                grupomateria__profesor=profesor
+            ).distinct().order_by('nombre')
+        else:
+            materias = Materia.objects.filter(
+                grupomateria__grupo_id=grupo_id
+            ).distinct().order_by('nombre')
 
     # --- POST: guardar asistencia ---
     if request.method == 'POST':
@@ -607,11 +614,16 @@ def pase_lista(request):
             messages.error(request, 'Fecha inválida.')
             return redirect('horarios:pase_lista')
 
-        gm = GrupoMateria.objects.get(
-            grupo_id=grupo_id, materia_id=materia_id, profesor=profesor
-        )
+        if es_profesor:
+            gm = GrupoMateria.objects.get(
+                grupo_id=grupo_id, materia_id=materia_id, profesor=profesor
+            )
+        else:
+            gm = GrupoMateria.objects.get(
+                grupo_id=grupo_id, materia_id=materia_id
+            )
 
-        # Filtrar alumnos por subgrupo del GrupoMateria
+        # Alumnos que aplican al GrupoMateria (respetando excepciones por materia)
         alumnos_qs = alumnos_para_grupo_materia(gm)
 
         for alumno in alumnos_qs:
@@ -644,10 +656,16 @@ def pase_lista(request):
             fecha = None
 
         if fecha:
-            gm = GrupoMateria.objects.get(
-                grupo_id=grupo_id, materia_id=materia_id, profesor=profesor
-            )
-            # Filtrar alumnos por subgrupo del GrupoMateria
+            if es_profesor:
+                gm = GrupoMateria.objects.get(
+                    grupo_id=grupo_id, materia_id=materia_id, profesor=profesor
+                )
+            else:
+                gm = GrupoMateria.objects.get(
+                    grupo_id=grupo_id, materia_id=materia_id
+                )
+
+            # Alumnos que aplican al GrupoMateria (respetando excepciones por materia)
             alumnos = alumnos_para_grupo_materia(gm)
 
             asistencias = Asistencia.objects.filter(
@@ -1806,37 +1824,50 @@ def incidencias_lista(request):
 @login_required
 @requiere_permiso('incidencias', 'editar')
 def incidencia_crear(request):
-    if not hasattr(request.user, 'perfil') or not request.user.perfil.profesor:
-        messages.error(request, 'Solo los profesores pueden crear incidencias.')
-        return redirect('horarios:incidencias_lista')
+    es_profesor = hasattr(request.user, 'perfil') and request.user.perfil.profesor
 
-    profesor = request.user.perfil.profesor
-
-    gms = GrupoMateria.objects.filter(profesor=profesor).select_related('grupo', 'materia')
-    grupos = Grupo.objects.filter(grupomateria__profesor=profesor).distinct().order_by('nombre')
+    if es_profesor:
+        profesor = request.user.perfil.profesor
+        gms = GrupoMateria.objects.filter(profesor=profesor).select_related('grupo', 'materia')
+        grupos = Grupo.objects.filter(grupomateria__profesor=profesor).distinct().order_by('nombre')
+    else:
+        gms = GrupoMateria.objects.all().select_related('grupo', 'materia')
+        grupos = Grupo.objects.all().order_by('nombre')
 
     if request.method == 'POST':
-        form = IncidenciaForm(request.POST)
+        if es_profesor:
+            form = IncidenciaForm(request.POST)
+        else:
+            form = IncidenciaAuxiliarForm(request.POST)
+
         if form.is_valid():
             incidencia = form.save(commit=False)
             incidencia.reportado_por = request.user
+
+            # Si es profesor, autocompletar el grupo desde el grupo_materia
+            if es_profesor and incidencia.grupo_materia:
+                incidencia.grupo = incidencia.grupo_materia.grupo
+
             incidencia.save()
             messages.success(request, 'Incidencia registrada.')
             return redirect('horarios:incidencias_lista')
         else:
             messages.error(request, 'Formulario inválido.')
     else:
-        form = IncidenciaForm()
+        if es_profesor:
+            form = IncidenciaForm()
+        else:
+            form = IncidenciaAuxiliarForm()
 
     return render(request, 'horarios/incidencia_form.html', {
         'form': form,
         'grupos': grupos,
         'gms': gms,
+        'es_profesor': es_profesor,
         'tipos': Incidencia.TIPOS,
         'accion': 'crear',
         'hoy': date.today().isoformat(),
     })
-
 
 @login_required
 @requiere_permiso('incidencias', 'editar')
@@ -1848,32 +1879,49 @@ def incidencia_editar(request, incidencia_id):
         or (hasattr(request.user, 'perfil') and request.user.perfil.rol == 'coordinador')
     )
 
-    es_propietario = (
+    es_propietario_profesor = (
         hasattr(request.user, 'perfil')
         and request.user.perfil.profesor
+        and incidencia.grupo_materia
         and incidencia.grupo_materia.profesor == request.user.perfil.profesor
     )
 
-    if not (es_coordinador or es_propietario):
+    # El auxiliar puede editar las incidencias que él mismo creó
+    es_autor = (incidencia.reportado_por == request.user)
+
+    if not (es_coordinador or es_propietario_profesor or es_autor):
         messages.error(request, 'No tienes permiso para editar esta incidencia.')
         return redirect('horarios:incidencias_lista')
 
+    es_profesor = hasattr(request.user, 'perfil') and request.user.perfil.profesor
+
     if request.method == 'POST':
-        form = IncidenciaForm(request.POST, instance=incidencia)
+        if es_profesor:
+            form = IncidenciaForm(request.POST, instance=incidencia)
+        else:
+            form = IncidenciaAuxiliarForm(request.POST, instance=incidencia)
+
         if form.is_valid():
-            form.save()
+            inc = form.save(commit=False)
+            if es_profesor and inc.grupo_materia:
+                inc.grupo = inc.grupo_materia.grupo
+            inc.save()
             messages.success(request, 'Incidencia actualizada.')
             return redirect('horarios:incidencias_lista')
         else:
             messages.error(request, 'Formulario inválido.')
     else:
-        form = IncidenciaForm(instance=incidencia)
+        if es_profesor:
+            form = IncidenciaForm(instance=incidencia)
+        else:
+            form = IncidenciaAuxiliarForm(instance=incidencia)
 
     return render(request, 'horarios/incidencia_form.html', {
         'form': form,
+        'incidencia': incidencia,
+        'es_profesor': es_profesor,
         'tipos': Incidencia.TIPOS,
         'accion': 'editar',
-        'incidencia': incidencia,
     })
 
 
@@ -1887,13 +1935,17 @@ def incidencia_eliminar(request, incidencia_id):
         or (hasattr(request.user, 'perfil') and request.user.perfil.rol == 'coordinador')
     )
 
-    es_propietario = (
+    es_propietario_profesor = (
         hasattr(request.user, 'perfil')
         and request.user.perfil.profesor
+        and incidencia.grupo_materia
         and incidencia.grupo_materia.profesor == request.user.perfil.profesor
     )
 
-    if not (es_coordinador or es_propietario):
+    # El auxiliar puede eliminar las incidencias que él mismo creó
+    es_autor = (incidencia.reportado_por == request.user)
+
+    if not (es_coordinador or es_propietario_profesor or es_autor):
         messages.error(request, 'No tienes permiso para eliminar esta incidencia.')
         return redirect('horarios:incidencias_lista')
 
@@ -1930,11 +1982,58 @@ def alumnos_por_gm(request):
         and gm.profesor == request.user.perfil.profesor
     )
 
-    if not (es_coordinador or es_profesor_del_gm):
+    # NUEVO: permitir a usuarios con permiso 'incidencias.editar'
+    tiene_permiso_incidencias = tiene_permiso(request.user, 'incidencias', 'editar')
+
+    if not (es_coordinador or es_profesor_del_gm or tiene_permiso_incidencias):
+        return JsonResponse({'alumnos': []})
+
+    # NUEVO: usar el helper para respetar excepciones de subgrupo por materia
+    alumnos = alumnos_para_grupo_materia(gm)
+
+    data = [
+        {
+            'id': a.id,
+            'nombre': f"{a.apellido_paterno} {a.apellido_materno or ''} {a.nombre}".strip(),
+            'matricula': a.matricula,
+        }
+        for a in alumnos
+    ]
+
+    return JsonResponse({'alumnos': data})
+
+
+@login_required
+def alumnos_por_grupo(request):
+    grupo_id = request.GET.get('grupo')
+
+    if not grupo_id:
+        return JsonResponse({'alumnos': []})
+
+    try:
+        grupo = Grupo.objects.get(pk=grupo_id)
+    except Grupo.DoesNotExist:
+        return JsonResponse({'alumnos': []})
+
+    # Permitir a coordinadores, profesores del grupo o usuarios con permiso 'incidencias.editar'
+    es_coordinador = (
+        request.user.is_staff
+        or (hasattr(request.user, 'perfil') and request.user.perfil.rol == 'coordinador')
+    )
+
+    es_profesor_del_grupo = (
+        hasattr(request.user, 'perfil')
+        and request.user.perfil.profesor
+        and GrupoMateria.objects.filter(grupo=grupo, profesor=request.user.perfil.profesor).exists()
+    )
+
+    tiene_permiso_incidencias = tiene_permiso(request.user, 'incidencias', 'editar')
+
+    if not (es_coordinador or es_profesor_del_grupo or tiene_permiso_incidencias):
         return JsonResponse({'alumnos': []})
 
     alumnos = Alumno.objects.filter(
-        grupo=gm.grupo, activo=True
+        grupo=grupo, activo=True
     ).order_by('apellido_paterno', 'apellido_materno', 'nombre')
 
     data = [

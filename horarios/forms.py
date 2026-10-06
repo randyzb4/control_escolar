@@ -20,3 +20,26 @@ class IncidenciaForm(forms.ModelForm):
             'tipo_reporte': 'Tipo de reporte',
             'resumen': 'Resumen del reporte',
         }
+
+class IncidenciaAuxiliarForm(forms.ModelForm):
+    """
+    Formulario para auxiliares académicos.
+    No usan grupo_materia; usan grupo directamente.
+    """
+    class Meta:
+        model = Incidencia
+        fields = ['fecha', 'alumno', 'grupo', 'tipo_reporte', 'resumen']
+        widgets = {
+            'fecha': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
+            'alumno': forms.Select(attrs={'class': 'form-select'}),
+            'grupo': forms.Select(attrs={'class': 'form-select'}),
+            'tipo_reporte': forms.Select(attrs={'class': 'form-select'}),
+            'resumen': forms.Textarea(attrs={'rows': 4, 'class': 'form-control'}),
+        }
+        labels = {
+            'fecha': 'Fecha',
+            'alumno': 'Alumno',
+            'grupo': 'Grupo',
+            'tipo_reporte': 'Tipo de reporte',
+            'resumen': 'Resumen del reporte',
+        }

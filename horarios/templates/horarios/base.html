@@ -70,7 +70,7 @@
                         <li class="nav-item">
                             <a class="nav-link" href="{% url 'horarios:lista_grupos' %}"><i class="bi bi-people"></i> Grupos</a>
                         </li>
-                                                <li class="nav-item">
+                        <li class="nav-item">
                             <a class="nav-link" href="{% url 'horarios:subgrupos_seleccionar' %}"><i class="bi bi-diagram-3"></i> Subgrupos</a>
                         </li>
                         <li class="nav-item">
@@ -130,10 +130,17 @@
                             </li>
                         {% endif %}
 
-                                                {% puede_ver user 'subgrupos' as ver_subgrupos %}
+                        {% puede_ver user 'subgrupos' as ver_subgrupos %}
                         {% if ver_subgrupos %}
                             <li class="nav-item">
                                 <a class="nav-link" href="{% url 'horarios:subgrupos_seleccionar' %}"><i class="bi bi-diagram-3"></i> Subgrupos</a>
+                            </li>
+                        {% endif %}
+
+                        {% puede_ver user 'pase_lista' as ver_pase_lista %}
+                        {% if ver_pase_lista %}
+                            <li class="nav-item">
+                                <a class="nav-link" href="{% url 'horarios:pase_lista' %}"><i class="bi bi-list-check"></i> Pase de Lista</a>
                             </li>
                         {% endif %}
 
