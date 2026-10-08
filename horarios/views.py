@@ -16,6 +16,7 @@ from .decorators import coordinador_requerido
 from .utils import alumnos_para_grupo_materia
 from .models import Grupo, Alumno, AlumnoSubgrupoMateria, Materia
 from .forms import IncidenciaForm, IncidenciaAuxiliarForm
+from django.db.models import Q
 
 
 
@@ -4074,23 +4075,41 @@ def subgrupos_grupo(request, grupo_id):
         materia_sel = materias_con_subgrupo.first()
 
     # POST: mover alumnos
+        # POST: mover alumnos
     if request.method == 'POST':
         alumnos_ids = request.POST.getlist('alumnos')
         subgrupo_destino = request.POST.get('subgrupo_destino')
 
         if alumnos_ids and subgrupo_destino in ('1', '2'):
+            # Determinar la materia padre
+            if materia_sel.materia_padre:
+                materia_padre = materia_sel.materia_padre
+            else:
+                materia_padre = materia_sel
+
+            # Obtener todas las variantes (materia padre + sus variantes)
+            variantes = Materia.objects.filter(
+                Q(id=materia_padre.id) | Q(materia_padre=materia_padre)
+            )
+
             for alumno_id in alumnos_ids:
                 try:
                     alumno = Alumno.objects.get(pk=alumno_id, grupo=grupo)
-                    AlumnoSubgrupoMateria.objects.update_or_create(
-                        alumno=alumno,
-                        materia=materia_sel,
-                        defaults={'subgrupo': subgrupo_destino}
-                    )
+                    for variante in variantes:
+                        AlumnoSubgrupoMateria.objects.update_or_create(
+                            alumno=alumno,
+                            materia=variante,
+                            defaults={'subgrupo': subgrupo_destino}
+                        )
                 except Alumno.DoesNotExist:
                     continue
 
             messages.success(request, f'{len(alumnos_ids)} alumno(s) movido(s) al subgrupo {subgrupo_destino}.')
+
+        return redirect(
+            f"{reverse('horarios:subgrupos_grupo', kwargs={'grupo_id': grupo.id})}"
+            f"?materia={materia_sel.id}"
+        )
 
         return redirect(
             f"{reverse('horarios:subgrupos_grupo', kwargs={'grupo_id': grupo.id})}"
