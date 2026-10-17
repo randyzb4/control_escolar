@@ -13,10 +13,11 @@ import math
 from datetime import timedelta
 from .permisos import requiere_permiso, tiene_permiso
 from .decorators import coordinador_requerido
-from .utils import alumnos_para_grupo_materia
+
 from .models import Grupo, Alumno, AlumnoSubgrupoMateria, Materia
 from .forms import IncidenciaForm, IncidenciaAuxiliarForm
 from django.db.models import Q
+from .utils import alumnos_para_grupo_materia, calcular_fecha_limite
 
 
 
@@ -3254,6 +3255,105 @@ def desempeno_pendientes(request, grupo_id):
         'pendientes': pendientes,
         'total_alumnos': alumnos.count(),
         'total_pendientes': len(pendientes),
+    })
+
+@login_required
+@requiere_permiso('desempeno', 'ver')
+def desempeno_pendientes_grupo(request, grupo_id):
+    """
+    Muestra TODOS los pendientes de un grupo en una fecha específica.
+    Incluye todas las materias (sin importar subgrupo).
+    Cada pendiente tiene un estatus: 'a_tiempo' o 'fuera_tiempo'.
+    """
+    from urllib.parse import quote
+
+    grupo = get_object_or_404(Grupo, pk=grupo_id)
+
+    # Filtro por fecha (por defecto: hoy)
+    fecha_filtro_str = request.GET.get('fecha')
+    hoy = date.today()
+    fecha_filtro = hoy
+    if fecha_filtro_str:
+        try:
+            fecha_filtro = datetime.strptime(fecha_filtro_str, '%Y-%m-%d').date()
+        except ValueError:
+            fecha_filtro = hoy
+
+    # Evidencias del grupo en esa fecha
+    evidencias = EvidenciaDesempeno.objects.filter(
+        grupo_materia__grupo=grupo,
+        fecha=fecha_filtro,
+    ).select_related(
+        'grupo_materia__materia',
+        'grupo_materia__grupo',
+        'periodo',
+    ).order_by('grupo_materia__materia__nombre', 'nombre')
+
+    # Calificaciones capturadas
+    calificaciones = {
+        (c.alumno_id, c.evidencia_id): c
+        for c in CalificacionEvidencia.objects.filter(evidencia__in=evidencias)
+    }
+
+    # Alumnos por GM (cache para no repetir consultas)
+    alumnos_por_gm = {}
+    for ev in evidencias:
+        gm_id = ev.grupo_materia_id
+        if gm_id not in alumnos_por_gm:
+            alumnos_por_gm[gm_id] = list(alumnos_para_grupo_materia(ev.grupo_materia))
+
+    # Construir pendientes
+    pendientes = []
+    for ev in evidencias:
+        gm = ev.grupo_materia
+        fecha_limite = calcular_fecha_limite(ev, gm)
+        estatus = 'fuera_tiempo' if hoy > fecha_limite else 'a_tiempo'
+
+        for alumno in alumnos_por_gm[ev.grupo_materia_id]:
+            ce = calificaciones.get((alumno.id, ev.id))
+            # Pendiente si no tiene calificación o es None/0
+            if ce is None or ce.porcentaje_obtenido is None or float(ce.porcentaje_obtenido) == 0:
+                # Generar mensaje de WhatsApp
+                mensaje = (
+                    f"Estimado responsable:\n\n"
+                    f"Le informamos que el alumno {alumno.nombre_completo()} "
+                    f"tiene un pendiente en la materia {gm.materia.nombre}:\n\n"
+                    f"*{ev.nombre}*\n"
+                    f"Fecha de entrega: {fecha_limite.strftime('%d/%m/%Y')}\n"
+                    f"Estatus: {'FUERA DE TIEMPO' if estatus == 'fuera_tiempo' else 'A tiempo'}\n\n"
+                    f"Por favor, asegúrese de que lo entregue a la brevedad.\n\n"
+                    f"Saludos cordiales."
+                )
+
+                pendientes.append({
+                    'alumno': alumno,
+                    'evidencia': ev,
+                    'materia': gm.materia,
+                    'grupo_materia': gm,
+                    'fecha_evidencia': ev.fecha,
+                    'fecha_limite': fecha_limite,
+                    'estatus': estatus,
+                    'mensaje_whatsapp': quote(mensaje),
+                })
+
+    # Ordenar: primero fuera de tiempo, luego por alumno
+    pendientes.sort(key=lambda x: (
+        0 if x['estatus'] == 'fuera_tiempo' else 1,
+        x['alumno'].apellido_paterno,
+        x['alumno'].apellido_materno or '',
+        x['alumno'].nombre,
+    ))
+
+    total_pendientes = len(pendientes)
+    total_fuera_tiempo = sum(1 for p in pendientes if p['estatus'] == 'fuera_tiempo')
+
+    return render(request, 'horarios/desempeno_pendientes_grupo.html', {
+        'grupo': grupo,
+        'pendientes': pendientes,
+        'fecha_filtro': fecha_filtro,
+        'hoy': hoy,
+        'total_pendientes': total_pendientes,
+        'total_fuera_tiempo': total_fuera_tiempo,
     })
 
 from datetime import timedelta

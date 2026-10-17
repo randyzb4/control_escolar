@@ -13,12 +13,19 @@
         {% if grupos %}
             <ul class="list-group list-group-flush">
                 {% for grupo in grupos %}
-                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                    <li class="list-group-item d-flex justify-content-between align-items-center flex-wrap gap-2">
                         <span><i class="bi bi-people-fill text-primary"></i> {{ grupo.nombre }}</span>
-                        <a href="{% url 'horarios:horario_grupo' grupo.id %}" class="btn btn-sm btn-primary">Ver horario</a>
-                        <a class="btn btn-sm btn-outline-primary" href="{% url 'horarios:lista_alumnos_grupo' grupo.id %}">
-    <i class="bi bi-people"></i> Alumnos
-</a>
+                        <div class="d-flex gap-1 flex-wrap">
+                            <a href="{% url 'horarios:horario_grupo' grupo.id %}" class="btn btn-sm btn-primary">
+                                <i class="bi bi-calendar-week"></i> Ver horario
+                            </a>
+                            <a class="btn btn-sm btn-outline-primary" href="{% url 'horarios:lista_alumnos_grupo' grupo.id %}">
+                                <i class="bi bi-people"></i> Alumnos
+                            </a>
+                            <a class="btn btn-sm btn-danger" href="{% url 'horarios:desempeno_pendientes_grupo' grupo.id %}">
+                                <i class="bi bi-clipboard-x"></i> Pendientes
+                            </a>
+                        </div>
                     </li>
                 {% endfor %}
             </ul>

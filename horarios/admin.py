@@ -87,10 +87,11 @@ class AulaAdmin(admin.ModelAdmin):
 
 @admin.register(Materia)
 class MateriaAdmin(admin.ModelAdmin):
-    list_display = ('nombre', 'horas_semanales', 'requiere_laboratorio', 'es_paralela', 'materia_padre')
-    list_filter = ('requiere_laboratorio', 'es_paralela', 'materia_padre')
+    list_display = ('nombre', 'horas_semanales', 'requiere_laboratorio', 'es_paralela', 'es_diaria', 'materia_padre')
+    list_filter = ('requiere_laboratorio', 'es_paralela', 'es_diaria', 'materia_padre')
     search_fields = ('nombre',)
     autocomplete_fields = ('materia_padre',)
+    list_editable = ('es_diaria',)
 
 
 # ============================================================
@@ -305,10 +306,10 @@ class ConfiguracionHorarioAdmin(admin.ModelAdmin):
 
 @admin.register(Alumno)
 class AlumnoAdmin(admin.ModelAdmin):
-    list_display = ('matricula', 'nombre_completo', 'grupo', 'subgrupo', 'activo')
+    list_display = ('matricula', 'nombre_completo', 'grupo', 'subgrupo', 'telefono_responsable', 'activo')
     list_filter = ('activo', 'grupo', 'subgrupo')
-    search_fields = ('matricula', 'nombre', 'apellido_paterno', 'apellido_materno')
-    list_editable = ('subgrupo', 'activo')
+    search_fields = ('matricula', 'nombre', 'apellido_paterno', 'apellido_materno', 'telefono_responsable')
+    list_editable = ('subgrupo', 'telefono_responsable', 'activo')
 
 
 @admin.register(Periodo)

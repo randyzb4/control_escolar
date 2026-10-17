@@ -47,6 +47,12 @@ class Materia(models.Model):
         default=False,
         help_text='Indica que esta materia se imparte en paralelo con otra en el mismo horario'
     )
+    es_diaria = models.BooleanField(
+        default=True,
+        help_text='Indica si la materia se imparte todos los días. '
+                  'Si es False, la fecha límite para entregar pendientes '
+                  'se calcula por la próxima clase.'
+    )
 
     def nombre_boleta(self):
         if self.materia_padre:
@@ -450,6 +456,12 @@ class Alumno(models.Model):
         blank=True,
         default='',
         help_text='Subgrupo del alumno para materias paralelas (ej: Inglés Nivel 1 vs Nivel 2)'
+    )
+    telefono_responsable = models.CharField(
+        max_length=20,
+        blank=True,
+        null=True,
+        help_text='Teléfono del responsable (formato México con código de país, ej: +521234567890)'
     )
 
     class Meta:

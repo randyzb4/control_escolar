@@ -73,6 +73,7 @@ urlpatterns = [
     path('reportes/', views.reportes, name='reportes'),
     path('grupos/<int:grupo_id>/lista-asistencia/pdf/', views.pdf_lista_asistencia, name='pdf_lista_asistencia'),
     path('desempeno/pendientes/<int:grupo_id>/', views.desempeno_pendientes, name='desempeno_pendientes'),
+    path('desempeno/pendientes/grupo/<int:grupo_id>/', views.desempeno_pendientes_grupo, name='desempeno_pendientes_grupo'),
     path('calendario/', views.calendario, name='calendario'),
     path('calendario/evento/nuevo/', views.evento_crear, name='evento_crear'),
     path('calendario/evento/<int:evento_id>/editar/', views.evento_editar, name='evento_editar'),

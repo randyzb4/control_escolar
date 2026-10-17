@@ -5,16 +5,20 @@
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h2>Desempeño del grupo: {{ grupo.nombre }}</h2>
-    <div class="d-flex gap-2">
+        <div class="d-flex gap-2 flex-wrap">
         <a class="btn btn-outline-secondary" href="{% url 'horarios:desempeno_seleccionar' %}">
             <i class="bi bi-arrow-left"></i> Volver
         </a>
         <a class="btn btn-warning" href="{% url 'horarios:desempeno_pendientes' grupo.id %}?materia={{ gm.id }}&periodo={{ periodo.id }}">
-    <i class="bi bi-exclamation-circle"></i> Pendientes
-</a>
-<a class="btn btn-primary" href="{% url 'horarios:evidencia_crear' grupo.id %}?materia={{ gm.id }}&periodo={{ periodo.id }}">
-    <i class="bi bi-plus-circle"></i> Nueva evidencia
-</a>
+            <i class="bi bi-exclamation-circle"></i> Pendientes de esta materia
+        </a>
+        <a class="btn btn-danger" href="{% url 'horarios:desempeno_pendientes_grupo' grupo.id %}">
+            <i class="bi bi-clipboard-x"></i> Ver todos los pendientes del grupo
+        </a>
+        <a class="btn btn-primary" href="{% url 'horarios:evidencia_crear' grupo.id %}?materia={{ gm.id }}&periodo={{ periodo.id }}">
+            <i class="bi bi-plus-circle"></i> Nueva evidencia
+        </a>
+    </div>
         </a>
     </div>
 </div>
