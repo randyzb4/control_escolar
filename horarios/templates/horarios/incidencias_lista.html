@@ -12,12 +12,26 @@
     <div class="row g-3">
         <div class="col-md-3">
             <label>Grupo</label>
-            <select name="grupo" class="form-select">
+            <select name="grupo" class="form-select" onchange="this.form.submit()">
                 <option value="">Todos</option>
                 {% for g in grupos %}
                     <option value="{{ g.id }}" {% if grupo_sel == g.id|stringformat:"s" %}selected{% endif %}>{{ g.nombre }}</option>
                 {% endfor %}
             </select>
+        </div>
+        <div class="col-md-3">
+            <label>Alumno</label>
+            <select name="alumno" class="form-select" {% if not alumnos %}disabled{% endif %}>
+                <option value="">Todos</option>
+                {% for a in alumnos %}
+                    <option value="{{ a.id }}" {% if alumno_sel == a.id|stringformat:"s" %}selected{% endif %}>
+                        {{ a.apellido_paterno }} {{ a.apellido_materno|default:'' }} {{ a.nombre }}
+                    </option>
+                {% endfor %}
+            </select>
+            {% if not alumnos %}
+                <small class="text-muted">Selecciona un grupo primero</small>
+            {% endif %}
         </div>
         <div class="col-md-3">
             <label>Materia</label>
@@ -37,23 +51,54 @@
                 {% endfor %}
             </select>
         </div>
-        <div class="col-md-2">
+        <div class="col-md-3">
             <label>Fecha inicio</label>
             <input type="date" name="fecha_inicio" value="{{ fecha_inicio }}" class="form-control">
         </div>
-        <div class="col-md-2">
+        <div class="col-md-3">
             <label>Fecha fin</label>
             <input type="date" name="fecha_fin" value="{{ fecha_fin }}" class="form-control">
         </div>
-        <div class="col-md-1 d-flex align-items-end">
+        <div class="col-md-6 d-flex align-items-end gap-2">
             <button type="submit" class="btn btn-primary">Filtrar</button>
-            <a href="{% url 'horarios:incidencias_lista' %}" class="btn btn-secondary ms-2">Limpiar</a>
+            <a href="{% url 'horarios:incidencias_lista' %}" class="btn btn-secondary">Limpiar</a>
         </div>
     </div>
 </form>
 
+{% if resumen_alumno %}
+    <div class="card mt-4 border-info">
+        <div class="card-header bg-info text-white">
+            <h5 class="mb-0">
+                <i class="bi bi-person-lines-fill"></i>
+                Resumen de {{ resumen_alumno.alumno.nombre_completo }}
+            </h5>
+        </div>
+        <div class="card-body">
+            <p class="mb-2">
+                <strong>Total de incidencias:</strong>
+                <span class="badge bg-primary fs-6">{{ resumen_alumno.total }}</span>
+            </p>
+            <hr>
+            <p class="mb-1"><strong>Por materia:</strong></p>
+            {% if resumen_alumno.por_materia %}
+                <ul class="list-unstyled mb-0">
+                    {% for materia, count in resumen_alumno.por_materia.items %}
+                        <li>
+                            <i class="bi bi-book"></i>
+                            {{ materia }}: <strong>{{ count }}</strong>
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <p class="text-muted mb-0">Sin incidencias registradas.</p>
+            {% endif %}
+        </div>
+    </div>
+{% endif %}
+
 {% if incidencias %}
-    <div class="card">
+    <div class="card mt-4">
         <div class="card-body p-0">
             <div class="table-responsive">
                 <table class="table table-bordered table-hover mb-0">
@@ -108,7 +153,7 @@
         </div>
     </div>
 {% else %}
-    <div class="alert alert-info">
+    <div class="alert alert-info mt-4">
         No hay incidencias registradas.
     </div>
 {% endif %}

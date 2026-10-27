@@ -1341,14 +1341,18 @@ def calificaciones_grupo(request, grupo_id):
         messages.error(request, 'No tienes permiso para ver este grupo.')
         return redirect('horarios:dashboard')
 
-    # Periodo seleccionado (el más reciente activo por defecto)
-    periodos = Periodo.objects.filter(activo=True, tipo='periodo').order_by('-fecha_inicio')
+    # Tipo de periodo (periodo de evaluación o trimestre)
+    tipo_sel = request.GET.get('tipo', 'periodo')
+    if tipo_sel not in ('periodo', 'trimestre'):
+        tipo_sel = 'periodo'
+
+    periodos = Periodo.objects.filter(activo=True, tipo=tipo_sel).order_by('-fecha_inicio')
     periodo_id = request.GET.get('periodo')
     periodo_sel = None
 
     if periodo_id:
         try:
-            periodo_sel = Periodo.objects.get(pk=periodo_id)
+            periodo_sel = Periodo.objects.get(pk=periodo_id, tipo=tipo_sel)
         except Periodo.DoesNotExist:
             periodo_sel = None
 
@@ -1372,15 +1376,34 @@ def calificaciones_grupo(request, grupo_id):
         grupo=grupo, activo=True
     ).order_by('apellido_paterno', 'apellido_materno', 'nombre')
 
-    # Calificaciones del periodo seleccionado
+    # Calificaciones
     calificaciones = {}
     if periodo_sel:
-        for c in Calificacion.objects.filter(
-            alumno__grupo=grupo,
-            periodo=periodo_sel,
-            calificacion__isnull=False,
-        ).select_related('grupo_materia__materia'):
-            calificaciones[(c.alumno_id, c.grupo_materia.materia_id)] = c.calificacion
+        if tipo_sel == 'trimestre':
+            # Promediar calificaciones de los periodos hijos del trimestre
+            periodos_eval = list(periodo_sel.hijos.filter(tipo='periodo').order_by('fecha_inicio'))
+            if periodos_eval:
+                califs_por_clave = {}
+                for c in Calificacion.objects.filter(
+                    alumno__grupo=grupo,
+                    periodo__in=periodos_eval,
+                    calificacion__isnull=False,
+                ).select_related('grupo_materia__materia'):
+                    key = (c.alumno_id, c.grupo_materia.materia_id)
+                    if key not in califs_por_clave:
+                        califs_por_clave[key] = []
+                    califs_por_clave[key].append(float(c.calificacion))
+
+                for key, valores in califs_por_clave.items():
+                    calificaciones[key] = sum(valores) / len(valores)
+        else:
+            # Periodo de evaluación directo
+            for c in Calificacion.objects.filter(
+                alumno__grupo=grupo,
+                periodo=periodo_sel,
+                calificacion__isnull=False,
+            ).select_related('grupo_materia__materia'):
+                calificaciones[(c.alumno_id, c.grupo_materia.materia_id)] = c.calificacion
 
     # Construir filas: cada fila es un alumno con sus calificaciones y promedio
     filas = []
@@ -1432,6 +1455,7 @@ def calificaciones_grupo(request, grupo_id):
         'grupo': grupo,
         'periodos': periodos,
         'periodo_sel': periodo_sel,
+        'tipo_sel': tipo_sel,
         'materias': materias,
         'filas': filas,
         'promedios_materia': promedios_mat,
@@ -1439,7 +1463,6 @@ def calificaciones_grupo(request, grupo_id):
         'es_coordinador': es_coordinador,
         'es_profesor': es_profesor_del_grupo,
     })
-
 
 
 @login_required
@@ -1462,13 +1485,18 @@ def pdf_calificaciones_grupo(request, grupo_id):
         messages.error(request, 'No tienes permiso.')
         return redirect('horarios:dashboard')
 
-    periodos = Periodo.objects.filter(activo=True, tipo='periodo').order_by('-fecha_inicio')
+    # Tipo de periodo (periodo de evaluación o trimestre)
+    tipo_sel = request.GET.get('tipo', 'periodo')
+    if tipo_sel not in ('periodo', 'trimestre'):
+        tipo_sel = 'periodo'
+
+    periodos = Periodo.objects.filter(activo=True, tipo=tipo_sel).order_by('-fecha_inicio')
     periodo_id = request.GET.get('periodo')
     periodo_sel = None
 
     if periodo_id:
         try:
-            periodo_sel = Periodo.objects.get(pk=periodo_id)
+            periodo_sel = Periodo.objects.get(pk=periodo_id, tipo=tipo_sel)
         except Periodo.DoesNotExist:
             periodo_sel = None
 
@@ -1491,14 +1519,33 @@ def pdf_calificaciones_grupo(request, grupo_id):
         grupo=grupo, activo=True
     ).order_by('apellido_paterno', 'apellido_materno', 'nombre')
 
+    # Calificaciones
     calificaciones = {}
     if periodo_sel:
-        for c in Calificacion.objects.filter(
-            alumno__grupo=grupo,
-            periodo=periodo_sel,
-            calificacion__isnull=False,
-        ).select_related('grupo_materia__materia'):
-            calificaciones[(c.alumno_id, c.grupo_materia.materia_id)] = c.calificacion
+        if tipo_sel == 'trimestre':
+            # Promediar calificaciones de los periodos hijos del trimestre
+            periodos_eval = list(periodo_sel.hijos.filter(tipo='periodo').order_by('fecha_inicio'))
+            if periodos_eval:
+                califs_por_clave = {}
+                for c in Calificacion.objects.filter(
+                    alumno__grupo=grupo,
+                    periodo__in=periodos_eval,
+                    calificacion__isnull=False,
+                ).select_related('grupo_materia__materia'):
+                    key = (c.alumno_id, c.grupo_materia.materia_id)
+                    if key not in califs_por_clave:
+                        califs_por_clave[key] = []
+                    califs_por_clave[key].append(float(c.calificacion))
+
+                for key, valores in califs_por_clave.items():
+                    calificaciones[key] = sum(valores) / len(valores)
+        else:
+            for c in Calificacion.objects.filter(
+                alumno__grupo=grupo,
+                periodo=periodo_sel,
+                calificacion__isnull=False,
+            ).select_related('grupo_materia__materia'):
+                calificaciones[(c.alumno_id, c.grupo_materia.materia_id)] = c.calificacion
 
     filas = []
     promedios_materia = {}
@@ -1549,6 +1596,7 @@ def pdf_calificaciones_grupo(request, grupo_id):
     html = render_to_string('horarios/pdf_calificaciones_grupo.html', {
         'grupo': grupo,
         'periodo_sel': periodo_sel,
+        'tipo_sel': tipo_sel,
         'materias': materias,
         'filas': filas,
         'promedios_materia': promedios_mat,
@@ -1564,7 +1612,6 @@ def pdf_calificaciones_grupo(request, grupo_id):
     if pisa_status.err:
         return HttpResponse('Error al generar PDF', status=500)
     return response
-
 
 @login_required
 @requiere_permiso('asistencias_grupo', 'ver')
@@ -1762,10 +1809,8 @@ def incidencias_lista(request):
         or (hasattr(request.user, 'perfil') and request.user.perfil.rol == 'coordinador')
     )
 
-    
-
     incidencias = Incidencia.objects.select_related(
-        'alumno', 'grupo_materia__grupo', 'grupo_materia__materia', 'reportado_por'
+        'alumno', 'grupo_materia__grupo', 'grupo_materia__materia', 'reportado_por', 'grupo'
     )
 
     if es_profesor and not es_coordinador:
@@ -1774,14 +1819,19 @@ def incidencias_lista(request):
 
     grupo_id = request.GET.get('grupo')
     materia_id = request.GET.get('materia')
+    alumno_id = request.GET.get('alumno')
     tipo = request.GET.get('tipo')
     fecha_inicio_str = request.GET.get('fecha_inicio')
     fecha_fin_str = request.GET.get('fecha_fin')
 
     if grupo_id:
-        incidencias = incidencias.filter(grupo_materia__grupo_id=grupo_id)
+        incidencias = incidencias.filter(
+            Q(grupo_id=grupo_id) | Q(grupo_materia__grupo_id=grupo_id)
+        )
     if materia_id:
         incidencias = incidencias.filter(grupo_materia__materia_id=materia_id)
+    if alumno_id:
+        incidencias = incidencias.filter(alumno_id=alumno_id)
     if tipo:
         incidencias = incidencias.filter(tipo_reporte=tipo)
     if fecha_inicio_str:
@@ -1809,17 +1859,65 @@ def incidencias_lista(request):
         grupos = Grupo.objects.all().order_by('nombre')
         materias = Materia.objects.all().order_by('nombre')
 
+    # Alumnos del grupo seleccionado (para el selector)
+    alumnos = Alumno.objects.none()
+    if grupo_id:
+        alumnos = Alumno.objects.filter(grupo_id=grupo_id, activo=True).order_by(
+            'apellido_paterno', 'apellido_materno', 'nombre'
+        )
+
+    # Resumen por alumno (solo si se filtra por alumno)
+    resumen_alumno = None
+    if alumno_id:
+        alumno_sel = Alumno.objects.filter(pk=alumno_id).first()
+        if alumno_sel:
+            incs_alumno = Incidencia.objects.filter(alumno=alumno_sel)
+            if tipo:
+                incs_alumno = incs_alumno.filter(tipo_reporte=tipo)
+            if fecha_inicio_str:
+                try:
+                    incs_alumno = incs_alumno.filter(
+                        fecha__gte=datetime.strptime(fecha_inicio_str, '%Y-%m-%d').date()
+                    )
+                except ValueError:
+                    pass
+            if fecha_fin_str:
+                try:
+                    incs_alumno = incs_alumno.filter(
+                        fecha__lte=datetime.strptime(fecha_fin_str, '%Y-%m-%d').date()
+                    )
+                except ValueError:
+                    pass
+
+            total = incs_alumno.count()
+            por_materia = {}
+            for i in incs_alumno.select_related('grupo_materia__materia'):
+                if i.grupo_materia:
+                    nombre_mat = i.grupo_materia.materia.nombre
+                else:
+                    nombre_mat = '— Sin materia —'
+                por_materia[nombre_mat] = por_materia.get(nombre_mat, 0) + 1
+
+            resumen_alumno = {
+                'alumno': alumno_sel,
+                'total': total,
+                'por_materia': dict(sorted(por_materia.items())),
+            }
+
     return render(request, 'horarios/incidencias_lista.html', {
         'incidencias': incidencias,
         'grupos': grupos,
         'materias': materias,
+        'alumnos': alumnos,
         'tipos': Incidencia.TIPOS,
         'grupo_sel': grupo_id or '',
         'materia_sel': materia_id or '',
+        'alumno_sel': alumno_id or '',
         'tipo_sel': tipo or '',
         'fecha_inicio': fecha_inicio_str or '',
         'fecha_fin': fecha_fin_str or '',
         'es_coordinador': es_coordinador,
+        'resumen_alumno': resumen_alumno,
     })
 
 
@@ -4125,6 +4223,8 @@ def pdf_boleta_trimestral(request, alumno_id):
         'config_institucion': config_inst,
         'logo_base64': config_inst.logo_base64(),
     })
+
+    
 
     response = HttpResponse(content_type='application/pdf')
     response['Content-Disposition'] = f'attachment; filename="boleta_trimestral_{alumno.matricula}.pdf"'

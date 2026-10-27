@@ -54,7 +54,7 @@
 
     <h1>Calificaciones del Grupo: {{ grupo.nombre }}</h1>
     <p class="subtitulo">
-        Periodo: {{ periodo_sel.nombre|default:'Sin periodo' }} — Generado el {% now 'd/m/Y H:i' %}
+                {% if tipo_sel == 'trimestre' %}Trimestre{% else %}Periodo{% endif %}: {{ periodo_sel.nombre|default:'Sin seleccionar' }} — Generado el {% now 'd/m/Y H:i' %}
     </p>
 
     <table>

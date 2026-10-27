@@ -7,12 +7,13 @@
     <div>
         <h2><i class="bi bi-table"></i> Calificaciones del grupo: {{ grupo.nombre }}</h2>
         <p class="text-muted mb-0">
-            {% if periodo_sel %} Periodo: <strong>{{ periodo_sel.nombre }}</strong>{% else %}Sin periodo seleccionado{% endif %}
+            {% if tipo_sel == 'trimestre' %}Trimestre{% else %}Periodo{% endif %}:
+            {% if periodo_sel %}<strong>{{ periodo_sel.nombre }}</strong>{% else %}Sin seleccionar{% endif %}
         </p>
     </div>
     <div class="d-flex gap-2">
         <a href="{% url 'horarios:lista_alumnos_grupo' grupo.id %}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Volver</a>
-        <a href="{% url 'horarios:pdf_calificaciones_grupo' grupo.id %}{% if periodo_sel %}?periodo={{ periodo_sel.id }}{% endif %}" class="btn btn-danger"><i class="bi bi-file-pdf"></i> PDF</a>
+        <a href="{% url 'horarios:pdf_calificaciones_grupo' grupo.id %}{% if periodo_sel %}?periodo={{ periodo_sel.id }}&tipo={{ tipo_sel }}{% endif %}" class="btn btn-danger"><i class="bi bi-file-pdf"></i> PDF</a>
         <button class="btn btn-outline-primary" onclick="window.print()"><i class="bi bi-printer"></i> Imprimir</button>
     </div>
 </div>
@@ -33,8 +34,15 @@
 
 <form method="get" class="mb-4">
     <div class="row g-3">
-        <div class="col-md-6">
-            <label class="form-label">Periodo</label>
+        <div class="col-md-3">
+            <label class="form-label">Tipo</label>
+            <select name="tipo" class="form-select" onchange="cambiarTipo(this)">
+                <option value="periodo" {% if tipo_sel == 'periodo' %}selected{% endif %}>Periodo de evaluación</option>
+                <option value="trimestre" {% if tipo_sel == 'trimestre' %}selected{% endif %}>Trimestre</option>
+            </select>
+        </div>
+        <div class="col-md-3">
+            <label class="form-label">{% if tipo_sel == 'trimestre' %}Trimestre{% else %}Periodo{% endif %}</label>
             <select name="periodo" class="form-select" onchange="this.form.submit()">
                 {% for p in periodos %}
                     <option value="{{ p.id }}" {% if periodo_sel and p.id == periodo_sel.id %}selected{% endif %}>{{ p.nombre }}</option>
@@ -71,9 +79,9 @@
                                     <td class="text-center">
                                         {% if calif %}
                                             {% if calif >= 6 %}
-                                                <span class="badge bg-success">{{ calif }}</span>
+                                                <span class="badge bg-success">{{ calif|floatformat:1 }}</span>
                                             {% else %}
-                                                <span class="badge bg-danger">{{ calif }}</span>
+                                                <span class="badge bg-danger">{{ calif|floatformat:1 }}</span>
                                             {% endif %}
                                         {% else %}
                                             <span class="text-muted">—</span>
@@ -116,4 +124,13 @@
         No hay alumnos o calificaciones en este periodo.
     </div>
 {% endif %}
+
+<script>
+function cambiarTipo(sel) {
+    const url = new URL(window.location.href);
+    url.searchParams.set('tipo', sel.value);
+    url.searchParams.delete('periodo');
+    window.location.href = url.toString();
+}
+</script>
 {% endblock %}

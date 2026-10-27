@@ -5,96 +5,60 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Boleta Trimestral</title>
     <style>
-        @page { size: A4 portrait; margin: 1.5cm; }
-        body { font-family: Arial, sans-serif; font-size: 10pt; color: #333; }
-
-        .header-institucion {
-            text-align: center;
-            border-bottom: 2px solid #2c3e50;
-            padding-bottom: 10px;
-            margin-bottom: 15px;
-        }
-        .header-institucion h2 {
-            font-size: 14pt;
-            color: #2c3e50;
-            margin: 4px 0 2px 0;
-        }
-        .header-institucion p {
-            font-size: 9pt;
-            color: #555;
-            margin: 2px 0;
-        }
-        .header-institucion img {
-            height: 40px;
-            width: auto;
-            margin-bottom: 5px;
-        }
-
-        h1 { text-align: center; font-size: 16pt; color: #2c3e50; margin-bottom: 5px; }
-        .subtitulo { text-align: center; color: #7f8c8d; font-size: 9pt; margin-bottom: 20px; }
-        .info-alumno { background-color: #ecf0f1; padding: 10px; margin-bottom: 20px; }
-        .info-alumno p { margin: 3px 0; }
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        th { background-color: #2c3e50; color: white; border: 1px solid #333; padding: 8px; font-size: 9pt; text-align: center; }
-        td { border: 1px solid #333; padding: 6px; text-align: center; font-size: 10pt; }
-        td.materia { text-align: left; font-weight: bold; }
-        .aprobado { color: #27ae60; font-weight: bold; }
-        .reprobado { color: #c0392b; font-weight: bold; }
-        .promedio-general { background-color: #ecf0f1; font-weight: bold; font-size: 11pt; }
-        .footer { text-align: center; margin-top: 30px; font-size: 8pt; color: #7f8c8d; }
+        @page { size: A4 portrait; margin: 1cm; }
+        body { font-family: Arial, sans-serif; font-size: 9pt; color: #333; }
     </style>
 </head>
 <body>
-    <div class="header-institucion">
+    <div style="text-align: center; border-bottom: 2px solid #2c3e50; padding-bottom: 5px; margin-bottom: 8px;">
         {% if logo_base64 %}
-            <img src="{{ logo_base64 }}" alt="Logo">
+            <img src="{{ logo_base64 }}" alt="Logo" style="height: 30px; width: auto; margin-bottom: 3px;">
         {% endif %}
-        <h2>{{ config_institucion.nombre }}</h2>
-        <p>{{ config_institucion.direccion|default:"" }}</p>
+        <h2 style="font-size: 12pt; color: #2c3e50; margin: 2px 0;">{{ config_institucion.nombre }}</h2>
+        <p style="font-size: 8pt; color: #555; margin: 1px 0;">{{ config_institucion.direccion|default:"" }}</p>
     </div>
 
-    <h1>Boleta Trimestral</h1>
-    <p class="subtitulo">Año escolar: {{ anio_escolar.nombre }} | Generado el {% now 'd/m/Y H:i' %}</p>
+    <h1 style="text-align: center; font-size: 13pt; color: #2c3e50; margin: 3px 0;">Boleta Trimestral</h1>
+    <p style="text-align: center; color: #7f8c8d; font-size: 8pt; margin-bottom: 8px;">Año escolar: {{ anio_escolar.nombre }} | Generado el {% now 'd/m/Y H:i' %}</p>
 
-    <div class="info-alumno">
-        <p><strong>Alumno:</strong> {{ alumno.apellido_paterno }} {{ alumno.apellido_materno|default:'' }} {{ alumno.nombre }}</p>
-        <p><strong>Matrícula:</strong> {{ alumno.matricula }}</p>
-        <p><strong>Grupo:</strong> {{ alumno.grupo.nombre }}</p>
+    <div style="background-color: #ecf0f1; padding: 6px; margin-bottom: 8px;">
+        <p style="margin: 2px 0; font-size: 9pt;"><strong>Alumno:</strong> {{ alumno.apellido_paterno }} {{ alumno.apellido_materno|default:'' }} {{ alumno.nombre }}</p>
+        <p style="margin: 2px 0; font-size: 9pt;"><strong>Matrícula:</strong> {{ alumno.matricula }} | <strong>Grupo:</strong> {{ alumno.grupo.nombre }}</p>
     </div>
 
-    <table>
+    <table style="width: 100%; border-collapse: collapse; margin-top: 8px;">
         <thead>
             <tr>
-                <th>Materia</th>
+                <th style="background-color: #2c3e50; color: white; border: 1px solid #333; padding: 4px; font-size: 8pt; text-align: center;">Materia</th>
                 {% for t in trimestres %}
-                    <th class="text-center">{{ t.nombre }}</th>
+                    <th style="background-color: #2c3e50; color: white; border: 1px solid #333; padding: 4px; font-size: 8pt; text-align: center;">{{ t.nombre }}</th>
                 {% endfor %}
-                <th class="text-center">Promedio Final</th>
+                <th style="background-color: #2c3e50; color: white; border: 1px solid #333; padding: 4px; font-size: 8pt; text-align: center;">Promedio Final</th>
             </tr>
         </thead>
         <tbody>
             {% for fila in filas %}
                 <tr>
-                    <td class="materia">{{ fila.materia }}</td>
+                    <td style="border: 1px solid #333; padding: 3px 5px; text-align: left; font-weight: bold; font-size: 9pt;">{{ fila.materia }}</td>
                     {% for calif in fila.trimestres %}
-                        <td class="text-center">
+                        <td style="border: 1px solid #333; padding: 3px; text-align: center; font-size: 9pt;">
                             {% if calif %}
                                 {% if calif >= 6 %}
-                                    <span class="aprobado">{{ calif }}</span>
+                                    <span style="color: #27ae60; font-weight: bold;">{{ calif }}</span>
                                 {% else %}
-                                    <span class="reprobado">{{ calif }}</span>
+                                    <span style="color: #c0392b; font-weight: bold;">{{ calif }}</span>
                                 {% endif %}
                             {% else %}
                                 <span>—</span>
                             {% endif %}
                         </td>
                     {% endfor %}
-                    <td class="text-center">
+                    <td style="border: 1px solid #333; padding: 3px; text-align: center; font-size: 9pt;">
                         {% if fila.promedio_final %}
                             {% if fila.promedio_final >= 6 %}
-                                <span class="aprobado">{{ fila.promedio_final }}</span>
+                                <span style="color: #27ae60; font-weight: bold;">{{ fila.promedio_final }}</span>
                             {% else %}
-                                <span class="reprobado">{{ fila.promedio_final }}</span>
+                                <span style="color: #c0392b; font-weight: bold;">{{ fila.promedio_final }}</span>
                             {% endif %}
                         {% else %}
                             <span>—</span>
@@ -105,9 +69,9 @@
         </tbody>
         <tfoot>
             <tr>
-                <td class="fw-bold">Promedio del trimestre</td>
+                <td style="background-color: #ecf0f1; font-weight: bold; border: 1px solid #333; padding: 3px 5px; text-align: left; font-size: 9pt;">Promedio del trimestre</td>
                 {% for prom in promedios_por_trimestre %}
-                    <td class="text-center fw-bold">
+                    <td style="background-color: #ecf0f1; font-weight: bold; border: 1px solid #333; padding: 3px; text-align: center; font-size: 9pt;">
                         {% if prom %}
                             {{ prom }}
                         {% else %}
@@ -115,12 +79,12 @@
                         {% endif %}
                     </td>
                 {% endfor %}
-                <td class="text-center fw-bold">
+                <td style="background-color: #ecf0f1; font-weight: bold; border: 1px solid #333; padding: 3px; text-align: center; font-size: 9pt;">
                     {% if promedio_general_final %}
                         {% if promedio_general_final >= 6 %}
-                            <span class="aprobado">{{ promedio_general_final }}</span>
+                            <span style="color: #27ae60; font-weight: bold;">{{ promedio_general_final }}</span>
                         {% else %}
-                            <span class="reprobado">{{ promedio_general_final }}</span>
+                            <span style="color: #c0392b; font-weight: bold;">{{ promedio_general_final }}</span>
                         {% endif %}
                     {% else %}
                         —
@@ -131,25 +95,20 @@
     </table>
 
     <!-- Firma del director -->
-    <table style="width: 100%; border: none; margin-top: 60px;">
+    <table style="width: 100%; border: none; margin-top: 20px;">
         <tr>
             <td style="width: 30%; border: none;"></td>
             <td style="width: 40%; text-align: center; border: none;">
-                <div style="border-top: 1px solid #000; width: 100%; padding-top: 5px; margin-bottom: 3px;"></div>
-                <div style="font-weight: bold; font-size: 11pt;">
-                    {{ config_institucion.director|default:"" }}
-                </div>
-                <div style="font-size: 9pt; color: #555;">
-                    Firma Director(a)
-                </div>
+                <div style="border-top: 1px solid #000; width: 100%; padding-top: 3px; margin-bottom: 2px;"></div>
+                <div style="font-weight: bold; font-size: 9pt;">{{ config_institucion.director|default:"" }}</div>
+                <div style="font-size: 8pt; color: #555;">Firma Director(a)</div>
             </td>
             <td style="width: 30%; border: none;"></td>
         </tr>
     </table>
 
-    <div class="footer">
-        <p>{{ config_institucion.nombre }}</p>
-        <p>{{ config_institucion.direccion|default:"" }}</p>
+    <div style="text-align: center; margin-top: 10px; font-size: 7pt; color: #7f8c8d;">
+        <p style="margin: 1px 0;">{{ config_institucion.nombre }}</p>
     </div>
 </body>
 </html>
