@@ -60,6 +60,20 @@
                         <li class="nav-item">
                             <a class="nav-link" href="{% url 'horarios:calendario' %}"><i class="bi bi-calendar3"></i> Calendario</a>
                         </li>
+
+                                                {% puede_ver user 'grupos' as ver_grupos %}
+                        {% if ver_grupos %}
+                            <li class="nav-item">
+                                <a class="nav-link" href="{% url 'horarios:lista_grupos' %}"><i class="bi bi-people"></i> Grupos</a>
+                            </li>
+                        {% endif %}
+
+                        {% puede_ver user 'reportes' as ver_reportes %}
+                        {% if ver_reportes %}
+                            <li class="nav-item">
+                                <a class="nav-link" href="{% url 'horarios:reportes' %}"><i class="bi bi-bar-chart-line"></i> Reportes</a>
+                            </li>
+                        {% endif %}
                     {% endif %}
 
                     {# ===== COORDINADOR: todos los módulos ===== #}

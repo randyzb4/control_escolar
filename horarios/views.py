@@ -872,8 +872,11 @@ def boleta_alumno(request, alumno_id):
             grupo=alumno.grupo, profesor=profesor
         ).exists()
 
-    if not (es_coordinador or es_profesor_del_grupo):
-        messages.error(request, 'No tienes permiso para ver esta boleta.')
+        # Permitir a usuarios con permiso 'grupos: ver'
+    tiene_permiso_grupos = tiene_permiso(request.user, 'grupos', 'ver')
+
+    if not (es_coordinador or es_profesor_del_grupo or tiene_permiso_grupos):
+        messages.error(request, 'No tienes permiso...')
         return redirect('horarios:dashboard')
 
     anio_escolar = Periodo.objects.filter(tipo='anual', activo=True).order_by('-fecha_inicio').first()
@@ -1084,8 +1087,11 @@ def pdf_boleta_alumno(request, alumno_id):
             grupo=alumno.grupo, profesor=profesor
         ).exists()
 
-    if not (es_coordinador or es_profesor_del_grupo):
-        messages.error(request, 'No tienes permiso.')
+        # Permitir a usuarios con permiso 'grupos: ver'
+    tiene_permiso_grupos = tiene_permiso(request.user, 'grupos', 'ver')
+
+    if not (es_coordinador or es_profesor_del_grupo or tiene_permiso_grupos):
+        messages.error(request, 'No tienes permiso...')
         return redirect('horarios:dashboard')
 
     anio_escolar = Periodo.objects.filter(tipo='anual', activo=True).order_by('-fecha_inicio').first()
@@ -1337,7 +1343,9 @@ def calificaciones_grupo(request, grupo_id):
             grupo=grupo, profesor=profesor
         ).exists()
 
-    if not (es_coordinador or es_profesor_del_grupo):
+    tiene_permiso_grupos = tiene_permiso(request.user, 'grupos', 'ver')
+
+    if not (es_coordinador or es_profesor_del_grupo or tiene_permiso_grupos):
         messages.error(request, 'No tienes permiso para ver este grupo.')
         return redirect('horarios:dashboard')
 
@@ -1362,14 +1370,29 @@ def calificaciones_grupo(request, grupo_id):
     # Materias: profesor ve solo las suyas, coordinador ve todas
     if es_profesor_del_grupo and not es_coordinador:
         profesor = request.user.perfil.profesor
-        materias = Materia.objects.filter(
+        materias_raw = Materia.objects.filter(
             grupomateria__grupo=grupo,
             grupomateria__profesor=profesor
         ).distinct().order_by('nombre')
     else:
-        materias = Materia.objects.filter(
+        materias_raw = Materia.objects.filter(
             grupomateria__grupo=grupo
         ).distinct().order_by('nombre')
+
+    # Agrupar materias paralelas por nombre_boleta
+    grupos_por_nombre = {}
+    for m in materias_raw:
+        nombre = m.nombre_boleta()
+        if nombre not in grupos_por_nombre:
+            grupos_por_nombre[nombre] = []
+        grupos_por_nombre[nombre].append(m)
+
+    materias = []
+    for nombre_boleta, grupo_materias in sorted(grupos_por_nombre.items()):
+        materias.append({
+            'nombre': nombre_boleta,
+            'materia_ids': [m.id for m in grupo_materias],
+        })
 
     # Alumnos del grupo
     alumnos = Alumno.objects.filter(
@@ -1397,7 +1420,6 @@ def calificaciones_grupo(request, grupo_id):
                 for key, valores in califs_por_clave.items():
                     calificaciones[key] = sum(valores) / len(valores)
         else:
-            # Periodo de evaluación directo
             for c in Calificacion.objects.filter(
                 alumno__grupo=grupo,
                 periodo=periodo_sel,
@@ -1405,7 +1427,6 @@ def calificaciones_grupo(request, grupo_id):
             ).select_related('grupo_materia__materia'):
                 calificaciones[(c.alumno_id, c.grupo_materia.materia_id)] = c.calificacion
 
-    # Construir filas: cada fila es un alumno con sus calificaciones y promedio
     filas = []
     promedios_materia = {}
     suma_general = 0
@@ -1416,17 +1437,23 @@ def calificaciones_grupo(request, grupo_id):
         suma_alumno = 0
         cuenta_alumno = 0
 
-        for m in materias:
-            calif = calificaciones.get((a.id, m.id))
+        for mat in materias:
+            # Buscar calificación en cualquiera de las materias paralelas
+            calif = None
+            for m_id in mat['materia_ids']:
+                c = calificaciones.get((a.id, m_id))
+                if c is not None:
+                    calif = c
+                    break
             cals.append(calif)
             if calif is not None:
                 suma_alumno += float(calif)
                 cuenta_alumno += 1
 
-                if m.id not in promedios_materia:
-                    promedios_materia[m.id] = [0, 0]
-                promedios_materia[m.id][0] += float(calif)
-                promedios_materia[m.id][1] += 1
+                if mat['nombre'] not in promedios_materia:
+                    promedios_materia[mat['nombre']] = [0, 0]
+                promedios_materia[mat['nombre']][0] += float(calif)
+                promedios_materia[mat['nombre']][1] += 1
 
         promedio_alumno = _redondear_calificacion(suma_alumno / cuenta_alumno) if cuenta_alumno > 0 else None
 
@@ -1442,8 +1469,8 @@ def calificaciones_grupo(request, grupo_id):
 
     # Promedios por materia
     promedios_mat = []
-    for m in materias:
-        datos = promedios_materia.get(m.id)
+    for mat in materias:
+        datos = promedios_materia.get(mat['nombre'])
         if datos and datos[1] > 0:
             promedios_mat.append(_redondear_calificacion(datos[0] / datos[1]))
         else:
@@ -1481,7 +1508,9 @@ def pdf_calificaciones_grupo(request, grupo_id):
             grupo=grupo, profesor=profesor
         ).exists()
 
-    if not (es_coordinador or es_profesor_del_grupo):
+    tiene_permiso_grupos = tiene_permiso(request.user, 'grupos', 'ver')
+
+    if not (es_coordinador or es_profesor_del_grupo or tiene_permiso_grupos):
         messages.error(request, 'No tienes permiso.')
         return redirect('horarios:dashboard')
 
@@ -1506,14 +1535,29 @@ def pdf_calificaciones_grupo(request, grupo_id):
     # Materias: profesor ve solo las suyas, coordinador ve todas
     if es_profesor_del_grupo and not es_coordinador:
         profesor = request.user.perfil.profesor
-        materias = Materia.objects.filter(
+        materias_raw = Materia.objects.filter(
             grupomateria__grupo=grupo,
             grupomateria__profesor=profesor
         ).distinct().order_by('nombre')
     else:
-        materias = Materia.objects.filter(
+        materias_raw = Materia.objects.filter(
             grupomateria__grupo=grupo
         ).distinct().order_by('nombre')
+
+    # Agrupar materias paralelas por nombre_boleta
+    grupos_por_nombre = {}
+    for m in materias_raw:
+        nombre = m.nombre_boleta()
+        if nombre not in grupos_por_nombre:
+            grupos_por_nombre[nombre] = []
+        grupos_por_nombre[nombre].append(m)
+
+    materias = []
+    for nombre_boleta, grupo_materias in sorted(grupos_por_nombre.items()):
+        materias.append({
+            'nombre': nombre_boleta,
+            'materia_ids': [m.id for m in grupo_materias],
+        })
 
     alumnos = Alumno.objects.filter(
         grupo=grupo, activo=True
@@ -1523,7 +1567,6 @@ def pdf_calificaciones_grupo(request, grupo_id):
     calificaciones = {}
     if periodo_sel:
         if tipo_sel == 'trimestre':
-            # Promediar calificaciones de los periodos hijos del trimestre
             periodos_eval = list(periodo_sel.hijos.filter(tipo='periodo').order_by('fecha_inicio'))
             if periodos_eval:
                 califs_por_clave = {}
@@ -1557,17 +1600,22 @@ def pdf_calificaciones_grupo(request, grupo_id):
         suma_alumno = 0
         cuenta_alumno = 0
 
-        for m in materias:
-            calif = calificaciones.get((a.id, m.id))
+        for mat in materias:
+            calif = None
+            for m_id in mat['materia_ids']:
+                c = calificaciones.get((a.id, m_id))
+                if c is not None:
+                    calif = c
+                    break
             cals.append(calif)
             if calif is not None:
                 suma_alumno += float(calif)
                 cuenta_alumno += 1
 
-                if m.id not in promedios_materia:
-                    promedios_materia[m.id] = [0, 0]
-                promedios_materia[m.id][0] += float(calif)
-                promedios_materia[m.id][1] += 1
+                if mat['nombre'] not in promedios_materia:
+                    promedios_materia[mat['nombre']] = [0, 0]
+                promedios_materia[mat['nombre']][0] += float(calif)
+                promedios_materia[mat['nombre']][1] += 1
 
         promedio_alumno = _redondear_calificacion(suma_alumno / cuenta_alumno) if cuenta_alumno > 0 else None
 
@@ -1582,8 +1630,8 @@ def pdf_calificaciones_grupo(request, grupo_id):
         })
 
     promedios_mat = []
-    for m in materias:
-        datos = promedios_materia.get(m.id)
+    for mat in materias:
+        datos = promedios_materia.get(mat['nombre'])
         if datos and datos[1] > 0:
             promedios_mat.append(_redondear_calificacion(datos[0] / datos[1]))
         else:
@@ -4004,8 +4052,11 @@ def boleta_trimestral(request, alumno_id):
             grupo=alumno.grupo, profesor=profesor
         ).exists()
 
-    if not (es_coordinador or es_profesor_del_grupo):
-        messages.error(request, 'No tienes permiso para ver esta boleta.')
+        # Permitir a usuarios con permiso 'grupos: ver'
+    tiene_permiso_grupos = tiene_permiso(request.user, 'grupos', 'ver')
+
+    if not (es_coordinador or es_profesor_del_grupo or tiene_permiso_grupos):
+        messages.error(request, 'No tienes permiso...')
         return redirect('horarios:dashboard')
 
     anio_escolar = Periodo.objects.filter(tipo='anual', activo=True).order_by('-fecha_inicio').first()
@@ -4122,8 +4173,11 @@ def pdf_boleta_trimestral(request, alumno_id):
             grupo=alumno.grupo, profesor=profesor
         ).exists()
 
-    if not (es_coordinador or es_profesor_del_grupo):
-        messages.error(request, 'No tienes permiso.')
+        # Permitir a usuarios con permiso 'grupos: ver'
+    tiene_permiso_grupos = tiene_permiso(request.user, 'grupos', 'ver')
+
+    if not (es_coordinador or es_profesor_del_grupo or tiene_permiso_grupos):
+        messages.error(request, 'No tienes permiso...')
         return redirect('horarios:dashboard')
 
     anio_escolar = Periodo.objects.filter(tipo='anual', activo=True).order_by('-fecha_inicio').first()

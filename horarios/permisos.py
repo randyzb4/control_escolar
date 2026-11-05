@@ -70,23 +70,25 @@ def tiene_permiso(user, modulo, accion='ver'):
     if user.perfil.rol == 'coordinador':
         return True
 
-    # Profesor: solo módulos internos de profesor
+        # Profesor: módulos internos de profesor + módulos adicionales permitidos
     if user.perfil.rol == 'profesor':
-         modulos_profesor = {
+        modulos_profesor = {
             'dashboard',
             'mi_horario',
             'mis_grupos',
             'capturar',
             'pase_lista',
             'bitacora',
-            # Módulos compartidos con coordinador (las vistas filtran
-            # los datos por profesor automáticamente)
             'incidencias',
             'desempeno',
             'planeaciones',
             'calendario',
         }
-         return modulo in modulos_profesor
+        if modulo in modulos_profesor:
+            return True
+        # Si no es un módulo de profesor, revisar modulos_permitidos
+        modulos = user.perfil.modulos_permitidos or {}
+        return modulos.get(modulo, {}).get(accion, False)
 
     # Auxiliar, consulta, etc.: revisar modulos_permitidos
     modulos = user.perfil.modulos_permitidos or {}

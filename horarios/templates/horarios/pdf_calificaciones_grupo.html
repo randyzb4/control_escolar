@@ -61,9 +61,9 @@
         <thead>
             <tr>
                 <th>Alumno</th>
-                {% for m in materias %}
-                    <th class="text-center">{{ m.nombre }}</th>
-                {% endfor %}
+                {% for mat in materias %}
+    <th class="text-center">{{ mat.nombre }}</th>
+{% endfor %}
                 <th class="text-center">Promedio</th>
             </tr>
         </thead>
