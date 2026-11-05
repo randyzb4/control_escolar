@@ -107,6 +107,12 @@
                                 </td>
                                 <td class="text-center">
                                     <div class="d-flex gap-1 justify-content-center flex-wrap">
+                                        <button type="button" class="btn btn-sm btn-outline-info"
+                                                data-bs-toggle="modal"
+                                                data-bs-target="#modalEvidencia{{ p.evidencia.id }}"
+                                                title="Ver detalle">
+                                            <i class="bi bi-eye"></i>
+                                        </button>
                                         <a href="{% url 'horarios:capturar_desempeno' p.evidencia.id %}"
                                            class="btn btn-sm btn-primary"
                                            title="Capturar calificación">
@@ -139,5 +145,77 @@
         No hay pendientes para esta fecha.
     </div>
 {% endif %}
+
+{# Modales de detalle de evidencia #}
+{% for p in pendientes %}
+    <div class="modal fade" id="modalEvidencia{{ p.evidencia.id }}" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="bi bi-clipboard-check"></i> {{ p.evidencia.nombre }}
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <dl class="row mb-0">
+                        <dt class="col-sm-4">Tipo:</dt>
+                        <dd class="col-sm-8">{{ p.evidencia.get_tipo_display }}</dd>
+
+                        <dt class="col-sm-4">Valor:</dt>
+                        <dd class="col-sm-8"><span class="badge bg-primary">{{ p.evidencia.porcentaje }}%</span></dd>
+
+                        <dt class="col-sm-4">Fecha evidencia:</dt>
+                        <dd class="col-sm-8">{{ p.evidencia.fecha|date:"d/m/Y" }}</dd>
+
+                        <dt class="col-sm-4">Fecha límite:</dt>
+                        <dd class="col-sm-8">{{ p.fecha_limite|date:"d/m/Y" }}</dd>
+
+                        <dt class="col-sm-4">Grupo:</dt>
+                        <dd class="col-sm-8">{{ p.grupo_materia.grupo.nombre }}</dd>
+
+                        <dt class="col-sm-4">Materia:</dt>
+                        <dd class="col-sm-8">{{ p.materia.nombre }}</dd>
+
+                        <dt class="col-sm-4">Alumno:</dt>
+                        <dd class="col-sm-8">
+                            {{ p.alumno.apellido_paterno }} {{ p.alumno.apellido_materno|default:'' }} {{ p.alumno.nombre }}
+                        </dd>
+
+                        <dt class="col-sm-4">Estatus:</dt>
+                        <dd class="col-sm-8">
+                            {% if p.estatus == 'fuera_tiempo' %}
+                                <span class="badge bg-danger">Fuera de tiempo</span>
+                            {% else %}
+                                <span class="badge bg-success">A tiempo</span>
+                            {% endif %}
+                        </dd>
+
+                        {% if p.evidencia.descripcion %}
+                            <dt class="col-sm-4">Descripción:</dt>
+                            <dd class="col-sm-8">{{ p.evidencia.descripcion|linebreaks }}</dd>
+                        {% endif %}
+
+                        {% if p.evidencia.creada_por %}
+                            <dt class="col-sm-4">Creada por:</dt>
+                            <dd class="col-sm-8">{{ p.evidencia.creada_por.username }}</dd>
+                        {% endif %}
+
+                        {% if p.evidencia.fecha_creacion %}
+                            <dt class="col-sm-4">Creada el:</dt>
+                            <dd class="col-sm-8">{{ p.evidencia.fecha_creacion|date:"d/m/Y H:i" }}</dd>
+                        {% endif %}
+                    </dl>
+                </div>
+                <div class="modal-footer">
+                    <a href="{% url 'horarios:capturar_desempeno' p.evidencia.id %}" class="btn btn-success">
+                        <i class="bi bi-pencil-square"></i> Capturar calificaciones
+                    </a>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endfor %}
 
 {% endblock %}
